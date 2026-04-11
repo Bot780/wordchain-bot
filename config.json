@@ -1,0 +1,20 @@
+{
+  "lobbytime": 60,
+  "maxplayers": 10,
+  "minplayers": 2,
+  "stages": [
+    { "minWords": 0, "maxWords": 4, "minLength": 3, "turnTime": 50 },
+    { "minWords": 5, "maxWords": 9, "minLength": 4, "turnTime": 40 },
+    { "minWords": 10, "maxWords": 14, "minLength": 5, "turnTime": 30 },
+    { "minWords": 15, "maxWords": -1, "minLength": 6, "turnTime": 20 }
+  ],
+  "messages": {
+    "stage2": "⚠️ Difficulty increased!",
+    "stage3": "🔥 Hard mode!",
+    "stage4": "💀 Insane mode!"
+  },
+  "eliminationMessage": "💀 {player} eliminated (timeout)",
+  "winnerMessage": "👑 Winner: {player}",
+  "allowSamePlayerRepeat": false,
+  "caseSensitive": false
+}

@@ -129,6 +129,11 @@ function updateDifficulty(channel) {
   // 🔥 STAGE MESSAGES (NO SPAM)
   if (game.lastAnnouncedLength !== newLength) {
 
+// 📈 LENGTH INCREASE MESSAGE
+if (newLength > 3) {
+  channel.send(`📈 Word length increased to **${newLength}** letters!`);
+}
+
     if (newLength === 7) {
       channel.send("🔥 EXTREME MODE!");
     } 
@@ -223,12 +228,17 @@ async function startGame(channel) {
   game.active = true;
   clearInterval(game.lobbyInterval);
 
+  // 🔥 RESET (THIS WAS MISSING)
+  game.usedWords = [];
+  game.currentPlayerIndex = 0;
+  game.turn = 1;
+  game.minLength = 3;
+  game.turnTime = 45000;
+  game.lastAnnouncedLength = 0;
+
   const letters = "abcdefghijklmnopqrstuvwxyz";
   game.lastLetter = letters[Math.floor(Math.random() * letters.length)];
 
-  game.currentPlayerIndex = 0;
-  game.turn = 1;
-game.lastAnnouncedLength = 0;
   game.players.forEach(p => {
     game.stats[p] = { points: 0, longestWord: "" };
   });

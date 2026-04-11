@@ -274,7 +274,7 @@ game.lastAnnouncedLength = 0;
 }
 
 // ===== TURN =====
-function nextTurn(channel) {
+async function nextTurn(channel) {
   if (!game.active) return;
 
   clearTimeout(game.timer);

@@ -17,16 +17,35 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('useradd')
     .setDescription('Add points or wins')
-    .addUserOption(o => o.setName('user').setRequired(true))
-    .addIntegerOption(o => o.setName('points').setRequired(false))
-    .addIntegerOption(o => o.setName('wins').setRequired(false)),
+
+    // ✅ FIXED OPTIONS
+    .addUserOption(o =>
+      o.setName('user')
+       .setDescription('Select user') // 🔥 REQUIRED
+       .setRequired(true)
+    )
+
+    .addIntegerOption(o =>
+      o.setName('points')
+       .setDescription('Points to add') // 🔥 REQUIRED
+       .setRequired(false)
+    )
+
+    .addIntegerOption(o =>
+      o.setName('wins')
+       .setDescription('Wins to add') // 🔥 REQUIRED
+       .setRequired(false)
+    ),
 
   async execute(interaction) {
     const isOwner = interaction.user.id === OWNER_ID;
     const isServerOwner = interaction.guild.ownerId === interaction.user.id;
 
     if (!isOwner && !isServerOwner) {
-      return interaction.reply({ content: "❌ Server owner only", ephemeral: true });
+      return interaction.reply({
+        content: "❌ Server owner only",
+        ephemeral: true
+      });
     }
 
     const user = interaction.options.getUser('user');
@@ -46,6 +65,8 @@ module.exports = {
 
     saveData(data);
 
-    interaction.reply(`✅ Updated <@${user.id}> → +${addPoints} pts, +${addWins} wins`);
+    interaction.reply(
+      `✅ Updated <@${user.id}> → +${addPoints} pts, +${addWins} wins`
+    );
   }
 };

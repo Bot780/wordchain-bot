@@ -17,14 +17,21 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('userreset')
     .setDescription('Reset user stats')
-    .addUserOption(o => o.setName('user').setRequired(true)),
+    .addUserOption(o =>
+      o.setName('user')
+       .setDescription('Select user')
+       .setRequired(true)
+    ), // 🔥 THIS COMMA WAS MISSING
 
   async execute(interaction) {
     const isOwner = interaction.user.id === OWNER_ID;
     const isAdmin = interaction.member.permissions.has("Administrator");
 
     if (!isOwner && !isAdmin) {
-      return interaction.reply({ content: "❌ Admin only", ephemeral: true });
+      return interaction.reply({
+        content: "❌ Admin only",
+        ephemeral: true
+      });
     }
 
     const user = interaction.options.getUser('user');

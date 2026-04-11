@@ -5,6 +5,14 @@ const fs = require('fs');
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = "1492188016649961653";
 
+const express = require("express");
+const app = express();
+
+app.get("/", (req, res) => res.send("Bot is alive"));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("🌐 Web server running"));
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,

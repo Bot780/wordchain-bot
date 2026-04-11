@@ -286,20 +286,22 @@ function nextTurn(channel) {
   const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
 const nextPlayer = game.players[nextIndex];
 
-  channel.send({
-    embeds: [
-      new EmbedBuilder()
-        .setTitle(`🎮 Turn #${game.turn}`)
-        .setDescription(
-  `🎯 Turn: <@${player}>\n` +
-  `⏭️ Next: <@${nextPlayer}>\n\n` +
-  `🔤 Letter: **${game.lastLetter.toUpperCase()}**\n` +
-  `📏 Min: **${game.minLength}**\n` +
-  `⏳ Time: **${game.turnTime / 1000}s**`
-)
-        .setColor("Yellow")
-    ]
-  });
+  const msg = await channel.send({
+  content: `🔔 <@${player}>`, // 👈 ping inside SAME message
+  allowedMentions: { users: [player] }, // 👈 prevents extra spam
+  embeds: [
+    new EmbedBuilder()
+      .setTitle(`🎮 Turn #${game.turn}`)
+      .setDescription(
+        `🎯 Turn: <@${player}>\n` +
+        `⏭️ Next: <@${nextPlayer}>\n\n` +
+        `🔤 Letter: **${game.lastLetter.toUpperCase()}**\n` +
+        `📏 Min: **${game.minLength}**\n` +
+        `⏳ Time: **${game.turnTime / 1000}s**`
+      )
+      .setColor("Yellow")
+  ]
+});
 
   game.timer = setTimeout(() => {
     eliminate(channel, player);

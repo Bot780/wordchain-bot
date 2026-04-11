@@ -13,6 +13,16 @@ app.get("/", (req, res) => res.send("Bot is alive"));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("🌐 Web server running"));
 
+process.on("uncaughtException", (err) => {
+  console.error("Crash:", err);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("Promise Error:", err);
+  process.exit(1);
+});
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,

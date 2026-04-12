@@ -246,3 +246,4 @@ async handleInteraction(interaction) {
 
   return true;
 }
+};

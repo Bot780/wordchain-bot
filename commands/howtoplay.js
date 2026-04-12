@@ -178,26 +178,30 @@ function buildEmbed(page) {
 function buildButtons(page) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`htp_page_0`)
+      .setCustomId(`htp_first`)
       .setLabel('⏮')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page === 0),
+
     new ButtonBuilder()
-      .setCustomId(`htp_page_${page - 1}`)
+      .setCustomId(`htp_prev_${page}`)
       .setLabel('◀ Prev')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(page === 0),
+
     new ButtonBuilder()
-  .setCustomId(`htp_page_0`)
-  .setLabel('🏠')
-  .setStyle(ButtonStyle.Success),
-new ButtonBuilder()
-      .setCustomId(`htp_page_${page + 1}`)
+      .setCustomId(`htp_home`)
+      .setLabel('🏠')
+      .setStyle(ButtonStyle.Success),
+
+    new ButtonBuilder()
+      .setCustomId(`htp_next_${page}`)
       .setLabel('Next ▶')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(page === PAGES.length - 1),
+
     new ButtonBuilder()
-      .setCustomId(`htp_page_${PAGES.length - 1}`)
+      .setCustomId(`htp_last`)
       .setLabel('⏭')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page === PAGES.length - 1)
@@ -218,19 +222,27 @@ module.exports = {
   },
 
   // ===== BUTTON HANDLER =====
-  async handleInteraction(interaction) {
-    if (!interaction.isButton()) return false;
-    if (!interaction.customId.startsWith('htp_page_')) return false;
+async handleInteraction(interaction) {
+  if (!interaction.isButton()) return false;
 
-    const page = parseInt(interaction.customId.replace('htp_page_', ''));
-    if (isNaN(page) || page < 0 || page >= PAGES.length) return false;
+  const id = interaction.customId;
 
-    await interaction.update({
-      embeds: [buildEmbed(page)],
-      components: [buildButtons(page)]
-    });
+  let page;
 
-    return true;
-  }
-};
+  if (id === 'htp_first') page = 0;
+  else if (id === 'htp_home') page = 0;
+  else if (id === 'htp_last') page = PAGES.length - 1;
+  else if (id.startsWith('htp_prev_')) page = parseInt(id.split('_')[2]) - 1;
+  else if (id.startsWith('htp_next_')) page = parseInt(id.split('_')[2]) + 1;
+  else return false;
 
+  if (page < 0) page = 0;
+  if (page >= PAGES.length) page = PAGES.length - 1;
+
+  await interaction.update({
+    embeds: [buildEmbed(page)],
+    components: [buildButtons(page)]
+  });
+
+  return true;
+}

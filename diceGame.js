@@ -15,8 +15,8 @@ function startGame(mode) {
   diceGame.mode = mode;
   diceGame.rolls = {};
 
-  if (mode === "easy") diceGame.chance = 0.3;
-  else if (mode === "hard") diceGame.chance = 0.05;
+  if (mode === "easy") diceGame.chance = 0.05;
+  else if (mode === "hard") diceGame.chance = 0.01;
   else diceGame.chance = 0;
 
   return diceGame.target;

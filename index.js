@@ -85,6 +85,15 @@ if (interaction.isButton()) {
   }
 }
 
+// ===== LEADERBOARD HANDLER =====
+if (interaction.isButton() || interaction.isStringSelectMenu()) {
+  const leaderboard = client.commands.get('leaderboard');
+  if (leaderboard?.handleInteraction) {
+    const handled = await leaderboard.handleInteraction(interaction);
+    if (handled !== false) return;
+  }
+}
+
   // ===== GAME BUTTON =====
   if (interaction.isButton()) {
     return game.handleButton(interaction);

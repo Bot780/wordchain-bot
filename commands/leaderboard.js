@@ -62,8 +62,9 @@ const CATEGORIES = {
   }
 };
 
-function getSorted(category) {
-  let players = getLeaderboard(100);
+// ===== FIXED: guildId passed in =====
+function getSorted(category, guildId) {
+  let players = getLeaderboard(guildId, 100);
 
   if (category === 'winrate') {
     players = players.filter(p => p.gamesPlayed >= 3);
@@ -85,10 +86,10 @@ function getSorted(category) {
   return players;
 }
 
-// ===== FIXED HERE ONLY 👇 =====
+// ===== FIXED: guildId passed in =====
 async function buildLeaderboardEmbed(client, category, page, guild) {
   const cat = CATEGORIES[category];
-  const players = getSorted(category);
+  const players = getSorted(category, guild.id);
   const totalPages = Math.max(1, Math.ceil(players.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const slice = players.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
@@ -111,11 +112,10 @@ async function buildLeaderboardEmbed(client, category, page, guild) {
       const medal = MEDALS[globalRank] ?? `\`#${globalRank + 1}\``;
 
       let name = `<@${p.userId}>`;
-
       try {
         const member = guild.members.cache.get(p.userId);
         if (member) {
-          name = `**${member.displayName}**`; // ✅ FIXED
+          name = `**${member.displayName}**`;
         } else {
           const user = await client.users.fetch(p.userId);
           name = `**${user.username}**`;
@@ -179,13 +179,12 @@ function buildPageButtons(category, page, totalPages) {
   );
 }
 
-// ===== ONLY CHANGE: pass guild 👇 =====
 async function sendLeaderboard(interaction, category, page, update = false) {
   const { embed, totalPages, page: safePage } = await buildLeaderboardEmbed(
     interaction.client,
     category,
     page,
-    interaction.guild // ✅ FIXED
+    interaction.guild
   );
 
   const payload = {
@@ -238,3 +237,4 @@ module.exports = {
     return false;
   }
 };
+

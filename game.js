@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const fs = require('fs');
 const { getConfig } = require('./configLoader');
+const { recordWord, recordGameEnd } = require('./stats');
 
 const dataFile = './data.json';
 
@@ -301,6 +302,9 @@ function eliminate(channel, player) {
 
   channel.send(msg);
 
+  // ===== STATS: record elimination =====
+  recordGameEnd(player, channel.guild.id, false, true);
+
   game.players = game.players.filter(p => p !== player);
 
   if (game.players.length <= 1) {
@@ -337,6 +341,9 @@ function endGame(channel) {
   }
 
   saveData(data);
+
+  // ===== STATS: record winner =====
+  recordGameEnd(winner, guildId, true, false);
 
   let longest = { word: "", user: null };
 
@@ -404,6 +411,9 @@ async function handleMessage(msg) {
   game.stats[player].points++;
   if (word.length > game.stats[player].longestWord.length)
     game.stats[player].longestWord = word;
+
+  // ===== STATS: record word =====
+  recordWord(player, msg.guild.id, word);
 
   game.turn++;
   game.currentPlayerIndex++;
@@ -477,3 +487,4 @@ game.leaveGame = leaveGame;
 game.reloadWords = loadWords;
 
 module.exports = game;
+

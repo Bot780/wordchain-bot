@@ -190,7 +190,7 @@ function buildButtons(page) {
     new ButtonBuilder()
   .setCustomId(`htp_page_0`)
   .setLabel('🏠')
-  .setStyle(ButtonStyle.Success)
+  .setStyle(ButtonStyle.Success),
 new ButtonBuilder()
       .setCustomId(`htp_page_${page + 1}`)
       .setLabel('Next ▶')

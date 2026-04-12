@@ -38,15 +38,19 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    const isOwner = interaction.user.id === OWNER_ID;
-    const isServerOwner = interaction.guild.ownerId === interaction.user.id;
+    const { PermissionsBitField } = require('discord.js');
 
-    if (!isOwner && !isServerOwner) {
-      return interaction.reply({
-        content: "❌ Server owner only",
-        ephemeral: true
-      });
-    }
+const isOwner = interaction.user.id === OWNER_ID;
+const isAdmin = interaction.member.permissions.has(
+  PermissionsBitField.Flags.Administrator
+);
+
+if (!isOwner && !isAdmin) {
+  return interaction.reply({
+    content: "❌ Admin only",
+    ephemeral: true
+  });
+}
 
     const user = interaction.options.getUser('user');
     const addPoints = interaction.options.getInteger('points') || 0;

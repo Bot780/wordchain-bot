@@ -224,4 +224,12 @@ function leaveGame(userId, channel) {
   }
 }
 
+// ===== EXPORT =====
+game.startLobby = startLobby;
+game.startGame = startGame;
+game.handleMessage = handleMessage; // 🔥 IMPORTANT
+game.handleButton = handleButton;
+game.leaveGame = leaveGame;
+game.reloadWords = loadWords;
+
 module.exports = game;

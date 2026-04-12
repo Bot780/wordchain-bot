@@ -165,7 +165,7 @@ async function startLobby(channel, interaction) {
     if (game.timeLeft === 30) channel.send("⚠️ 30 seconds left!");
     if (game.timeLeft === 15) channel.send("⚠️ 15 seconds left!");
 
-    await updateLobby(channel);
+    await game.updateLobbyUI(i.channel);
 
     if (game.timeLeft <= 0) {
       clearInterval(game.lobbyInterval);
@@ -447,6 +447,26 @@ function leaveGame(userId, channel) {
     endGame(channel);
   }
 }
+
+// ===== SHARED LOBBY UPDATE =====
+game.updateLobbyUI = async function(channel) {
+  if (!game.lobbyMessage) return;
+
+  const config = getConfig(channel.guild.id);
+
+  await game.lobbyMessage.edit({
+    embeds: [
+      new EmbedBuilder()
+        .setTitle("🎮 Word Chain Lobby")
+        .setDescription(
+          `Players (${game.players.length}/${config.maxplayers})\n` +
+          (game.players.map(p => `• <@${p}>`).join("\n") || "None") +
+          `\n\n⏳ ${game.timeLeft}s`
+        )
+        .setColor("Blue")
+    ]
+  });
+};
 
 // ===== EXPORT =====
 game.startLobby = startLobby;

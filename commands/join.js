@@ -8,21 +8,21 @@ module.exports = {
   async execute(i, game) {
 
     if (!game.lobbyMessage || game.active) {
-      return i.reply("❌ No active lobby");
+      return i.reply({ content: "❌ No active lobby", ephemeral: true });
     }
 
     if (game.players.includes(i.user.id)) {
-      return i.reply("Already joined!");
+      return i.reply({ content: "Already joined!", ephemeral: true });
     }
 
     game.players.push(i.user.id);
 
-    if (game.lobbyMessage) {
-      await game.lobbyMessage.edit({
-        embeds: [game.createLobbyEmbed()]
-      });
-    }
+    // 🔥 SAME SYSTEM AS BUTTON
+    await game.updateLobbyUI(i.channel);
 
-    i.reply("✅ Joined!");
+    return i.reply({
+      content: `✅ <@${i.user.id}> joined`,
+      allowedMentions: { users: [i.user.id] }
+    });
   }
 };

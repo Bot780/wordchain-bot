@@ -1,5 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField 
-} = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 
 const OWNER_ID = "1382280682319122442";
@@ -11,8 +10,7 @@ function loadData() {
 }
 
 function saveData(data) {
-  fs.writeFileSync(dataFile, 
-JSON.stringify(data, null, 2));
+  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
 }
 
 module.exports = {
@@ -40,10 +38,8 @@ module.exports = {
 
   async execute(interaction) {
 
-    const isOwner = interaction.user.id === 
-OWNER_ID;
-    const isAdmin = 
-interaction.member.permissions.has(
+    const isOwner = interaction.user.id === OWNER_ID;
+    const isAdmin = interaction.member.permissions.has(
       PermissionsBitField.Flags.Administrator
     );
 
@@ -54,18 +50,13 @@ interaction.member.permissions.has(
       });
     }
 
-    const user = 
-interaction.options.getUser('user');
-    const removePoints = 
-interaction.options.getInteger('points') || 0;
-    const removeWins = 
-interaction.options.getInteger('wins') || 0;
+    const user = interaction.options.getUser('user');
+    const removePoints = interaction.options.getInteger('points') || 0;
+    const removeWins = interaction.options.getInteger('wins') || 0;
 
-    if (removePoints === 0 && removeWins === 0) 
-{
+    if (removePoints === 0 && removeWins === 0) {
       return interaction.reply({
-        content: "❌ Provide points or wins to 
-remove",
+        content: "❌ Provide points or wins to remove",
         ephemeral: true
       });
     }
@@ -75,15 +66,13 @@ remove",
 
     if (!data[guildId]) data[guildId] = {};
     if (!data[guildId][user.id]) {
-      data[guildId][user.id] = { points: 0, 
-wins: 0 };
+      data[guildId][user.id] = { points: 0, wins: 0 };
     }
 
     // 🔥 SUBTRACT (NO NEGATIVE)
     data[guildId][user.id].points = Math.max(
       0,
-      data[guildId][user.id].points - 
-removePoints
+      data[guildId][user.id].points - removePoints
     );
 
     data[guildId][user.id].wins = Math.max(
@@ -94,8 +83,7 @@ removePoints
     saveData(data);
 
     return interaction.reply({
-      content: `➖ Updated <@${user.id}> → 
--${removePoints} pts, -${removeWins} wins`,
+      content: `➖ Updated <@${user.id}> → -${removePoints} pts, -${removeWins} wins`,
       allowedMentions: { users: [user.id] }
     });
   }

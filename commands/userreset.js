@@ -30,7 +30,7 @@ module.exports = {
        .setRequired(true)
        .addChoices(
          { name: 'Points', value: 'points' },
-         { name: 'Wins', value: 'wins' },
+         { name: 'Wins', value: 'gamesWon' }, // ✅ FIXED
          { name: 'All', value: 'all' }
        )
     ),
@@ -57,11 +57,19 @@ module.exports = {
 
     if (!data[guildId]) data[guildId] = {};
     if (!data[guildId][user.id]) {
-      data[guildId][user.id] = { points: 0, wins: 0 };
+      data[guildId][user.id] = {
+        points: 0,
+        gamesWon: 0,
+        gamesPlayed: 0
+      };
     }
 
     if (type === 'all') {
-      data[guildId][user.id] = { points: 0, wins: 0 };
+      data[guildId][user.id] = {
+        points: 0,
+        gamesWon: 0,
+        gamesPlayed: 0
+      };
     } else {
       data[guildId][user.id][type] = 0;
     }
@@ -73,7 +81,7 @@ module.exports = {
       .setColor("Red")
       .setDescription(
         `👤 User: <@${user.id}>\n` +
-        `🔄 Reset: **${type}**`
+        `🔄 Reset: **${type === "gamesWon" ? "wins" : type}**`
       );
 
     return interaction.reply({

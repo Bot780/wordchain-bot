@@ -30,7 +30,7 @@ module.exports = {
        .setRequired(true)
        .addChoices(
          { name: 'Points', value: 'points' },
-         { name: 'Wins', value: 'wins' }
+         { name: 'Wins', value: 'gamesWon' } // ✅ FIXED
        )
     )
 
@@ -41,7 +41,6 @@ module.exports = {
     ),
 
   async execute(interaction) {
-
     const isOwner = interaction.user.id === OWNER_ID;
     const isAdmin = interaction.member.permissions.has(
       PermissionsBitField.Flags.Administrator
@@ -63,7 +62,16 @@ module.exports = {
 
     if (!data[guildId]) data[guildId] = {};
     if (!data[guildId][user.id]) {
-      data[guildId][user.id] = { points: 0, wins: 0 };
+      data[guildId][user.id] = {
+        points: 0,
+        gamesWon: 0,
+        gamesPlayed: 0
+      };
+    }
+
+    // 🔥 SAFE REMOVE (no negative)
+    if (!data[guildId][user.id][type]) {
+      data[guildId][user.id][type] = 0;
     }
 
     data[guildId][user.id][type] = Math.max(
@@ -78,7 +86,7 @@ module.exports = {
       .setColor("Orange")
       .setDescription(
         `👤 User: <@${user.id}>\n` +
-        `➖ Removed: **${amount} ${type}**\n` +
+        `➖ Removed: **${amount} ${type === "gamesWon" ? "wins" : type}**\n` +
         `📊 Total: ${data[guildId][user.id][type]}`
       );
 

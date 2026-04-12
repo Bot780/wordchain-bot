@@ -76,6 +76,15 @@ client.on('interactionCreate', async interaction => {
     if (handled !== false) return;
   }
 
+// ===== PROFILE BUTTON HANDLER =====
+if (interaction.isButton()) {
+  const profile = client.commands.get('profile');
+  if (profile?.handleInteraction) {
+    const handled = await profile.handleInteraction(interaction);
+    if (handled !== false) return;
+  }
+}
+
   // ===== GAME BUTTON =====
   if (interaction.isButton()) {
     return game.handleButton(interaction);

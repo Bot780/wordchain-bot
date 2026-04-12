@@ -16,7 +16,7 @@ function saveData(data) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('useradd')
-    .setDescription('Add points or wins')
+    .setDescription('Add stats to user')
 
     .addUserOption(o =>
       o.setName('user')
@@ -24,18 +24,17 @@ module.exports = {
        .setRequired(true)
     )
 
-    // 🔥 TYPE SELECT
+    // 🔥 UPDATED TYPES
     .addStringOption(o =>
       o.setName('type')
        .setDescription('What to add')
        .setRequired(true)
        .addChoices(
          { name: 'Points', value: 'points' },
-         { name: 'Wins', value: 'wins' }
+         { name: 'Wins', value: 'gamesWon' } // ✅ FIXED
        )
     )
 
-    // 🔥 AMOUNT
     .addIntegerOption(o =>
       o.setName('amount')
        .setDescription('Amount to add')
@@ -65,21 +64,28 @@ module.exports = {
 
     if (!data[guildId]) data[guildId] = {};
     if (!data[guildId][user.id]) {
-      data[guildId][user.id] = { points: 0, wins: 0 };
+      data[guildId][user.id] = {
+        points: 0,
+        gamesWon: 0,
+        gamesPlayed: 0
+      };
     }
 
     // 🔥 APPLY
+    if (!data[guildId][user.id][type]) {
+      data[guildId][user.id][type] = 0;
+    }
+
     data[guildId][user.id][type] += amount;
 
     saveData(data);
 
-    // 🔥 EMBED RESPONSE
     const embed = new EmbedBuilder()
       .setTitle("✅ User Updated")
       .setColor("Green")
       .setDescription(
         `👤 User: <@${user.id}>\n` +
-        `➕ Added: **${amount} ${type}**`
+        `➕ Added: **${amount} ${type === "gamesWon" ? "wins" : type}**`
       );
 
     return interaction.reply({

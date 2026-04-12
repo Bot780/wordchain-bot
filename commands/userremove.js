@@ -18,8 +18,7 @@ JSON.stringify(data, null, 2));
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('userremove')
-    .setDescription('Remove points or wins from 
-user')
+    .setDescription('Remove points or wins from user')
 
     .addUserOption(o =>
       o.setName('user')

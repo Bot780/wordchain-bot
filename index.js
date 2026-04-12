@@ -94,6 +94,15 @@ if (interaction.isButton() || interaction.isStringSelectMenu()) {
   }
 }
 
+// ===== HOWTOPLAY HANDLER =====
+if (interaction.isButton()) {
+  const howto = client.commands.get('howtoplay');
+  if (howto?.handleInteraction) {
+    const handled = await howto.handleInteraction(interaction);
+    if (handled !== false) return;
+  }
+}
+
   // ===== GAME BUTTON =====
   if (interaction.isButton()) {
     return game.handleButton(interaction);

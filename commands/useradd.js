@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 
 const OWNER_ID = "1382280682319122442";
@@ -18,43 +18,47 @@ module.exports = {
     .setName('useradd')
     .setDescription('Add points or wins')
 
-    // ✅ FIXED OPTIONS
     .addUserOption(o =>
       o.setName('user')
-       .setDescription('Select user') // 🔥 REQUIRED
+       .setDescription('Select user')
        .setRequired(true)
     )
 
-    .addIntegerOption(o =>
-      o.setName('points')
-       .setDescription('Points to add') // 🔥 REQUIRED
-       .setRequired(false)
+    // 🔥 TYPE SELECT
+    .addStringOption(o =>
+      o.setName('type')
+       .setDescription('What to add')
+       .setRequired(true)
+       .addChoices(
+         { name: 'Points', value: 'points' },
+         { name: 'Wins', value: 'wins' }
+       )
     )
 
+    // 🔥 AMOUNT
     .addIntegerOption(o =>
-      o.setName('wins')
-       .setDescription('Wins to add') // 🔥 REQUIRED
-       .setRequired(false)
+      o.setName('amount')
+       .setDescription('Amount to add')
+       .setRequired(true)
     ),
 
   async execute(interaction) {
-    const { PermissionsBitField } = require('discord.js');
 
-const isOwner = interaction.user.id === OWNER_ID;
-const isAdmin = interaction.member.permissions.has(
-  PermissionsBitField.Flags.Administrator
-);
+    const isOwner = interaction.user.id === OWNER_ID;
+    const isAdmin = interaction.member.permissions.has(
+      PermissionsBitField.Flags.Administrator
+    );
 
-if (!isOwner && !isAdmin) {
-  return interaction.reply({
-    content: "❌ Admin only",
-    ephemeral: true
-  });
-}
+    if (!isOwner && !isAdmin) {
+      return interaction.reply({
+        content: "❌ Admin only",
+        ephemeral: true
+      });
+    }
 
     const user = interaction.options.getUser('user');
-    const addPoints = interaction.options.getInteger('points') || 0;
-    const addWins = interaction.options.getInteger('wins') || 0;
+    const type = interaction.options.getString('type');
+    const amount = interaction.options.getInteger('amount');
 
     const data = loadData();
     const guildId = interaction.guild.id;
@@ -64,13 +68,23 @@ if (!isOwner && !isAdmin) {
       data[guildId][user.id] = { points: 0, wins: 0 };
     }
 
-    data[guildId][user.id].points += addPoints;
-    data[guildId][user.id].wins += addWins;
+    // 🔥 APPLY
+    data[guildId][user.id][type] += amount;
 
     saveData(data);
 
-    interaction.reply(
-      `✅ Updated <@${user.id}> → +${addPoints} pts, +${addWins} wins`
-    );
+    // 🔥 EMBED RESPONSE
+    const embed = new EmbedBuilder()
+      .setTitle("✅ User Updated")
+      .setColor("Green")
+      .setDescription(
+        `👤 User: <@${user.id}>\n` +
+        `➕ Added: **${amount} ${type}**`
+      );
+
+    return interaction.reply({
+      embeds: [embed],
+      allowedMentions: { users: [user.id] }
+    });
   }
 };

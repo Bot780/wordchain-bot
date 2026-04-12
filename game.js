@@ -165,7 +165,7 @@ async function startLobby(channel, interaction) {
     if (game.timeLeft === 30) channel.send("⚠️ 30 seconds left!");
     if (game.timeLeft === 15) channel.send("⚠️ 15 seconds left!");
 
-    await game.updateLobbyUI(i.channel);
+    await game.updateLobbyUI(channel);
 
     if (game.timeLeft <= 0) {
       clearInterval(game.lobbyInterval);

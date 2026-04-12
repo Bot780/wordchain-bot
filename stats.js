@@ -76,8 +76,24 @@ function getRank(userId, guildId) {
   return index === -1 ? 0 : index + 1;
 }
 
+// ===== GET LEADERBOARD =====
+function getLeaderboard(limit = 50, guildId) {
+  const data = loadData();
+
+  if (!data[guildId]) return [];
+
+  const users = Object.entries(data[guildId]).map(([userId, stats]) => ({
+    userId,
+    ...getDefaultPlayer(),
+    ...stats
+  }));
+
+  return users.slice(0, limit);
+}
+
 module.exports = {
   getPlayer,
   updatePlayer,
-  getRank
+  getRank,
+  getLeaderboard
 };

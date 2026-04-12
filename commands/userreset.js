@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 
 const OWNER_ID = "1382280682319122442";
@@ -17,15 +17,30 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('userreset')
     .setDescription('Reset user stats')
+
     .addUserOption(o =>
       o.setName('user')
        .setDescription('Select user')
        .setRequired(true)
-    ), // 🔥 THIS COMMA WAS MISSING
+    )
+
+    .addStringOption(o =>
+      o.setName('type')
+       .setDescription('What to reset')
+       .setRequired(true)
+       .addChoices(
+         { name: 'Points', value: 'points' },
+         { name: 'Wins', value: 'wins' },
+         { name: 'All', value: 'all' }
+       )
+    ),
 
   async execute(interaction) {
+
     const isOwner = interaction.user.id === OWNER_ID;
-    const isAdmin = interaction.member.permissions.has("Administrator");
+    const isAdmin = interaction.member.permissions.has(
+      PermissionsBitField.Flags.Administrator
+    );
 
     if (!isOwner && !isAdmin) {
       return interaction.reply({
@@ -35,15 +50,35 @@ module.exports = {
     }
 
     const user = interaction.options.getUser('user');
+    const type = interaction.options.getString('type');
+
     const data = loadData();
     const guildId = interaction.guild.id;
 
-    if (data[guildId]?.[user.id]) {
+    if (!data[guildId]) data[guildId] = {};
+    if (!data[guildId][user.id]) {
       data[guildId][user.id] = { points: 0, wins: 0 };
+    }
+
+    if (type === 'all') {
+      data[guildId][user.id] = { points: 0, wins: 0 };
+    } else {
+      data[guildId][user.id][type] = 0;
     }
 
     saveData(data);
 
-    interaction.reply(`🔄 Reset stats for <@${user.id}>`);
+    const embed = new EmbedBuilder()
+      .setTitle("♻️ User Reset")
+      .setColor("Red")
+      .setDescription(
+        `👤 User: <@${user.id}>\n` +
+        `🔄 Reset: **${type}**`
+      );
+
+    return interaction.reply({
+      embeds: [embed],
+      allowedMentions: { users: [user.id] }
+    });
   }
 };

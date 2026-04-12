@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 
 const OWNER_ID = "1382280682319122442";
@@ -16,7 +16,7 @@ function saveData(data) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('userremove')
-    .setDescription('Remove points or wins from user')
+    .setDescription('Remove points or wins')
 
     .addUserOption(o =>
       o.setName('user')
@@ -24,16 +24,20 @@ module.exports = {
        .setRequired(true)
     )
 
-    .addIntegerOption(o =>
-      o.setName('points')
-       .setDescription('Points to remove')
-       .setRequired(false)
+    .addStringOption(o =>
+      o.setName('type')
+       .setDescription('What to remove')
+       .setRequired(true)
+       .addChoices(
+         { name: 'Points', value: 'points' },
+         { name: 'Wins', value: 'wins' }
+       )
     )
 
     .addIntegerOption(o =>
-      o.setName('wins')
-       .setDescription('Wins to remove')
-       .setRequired(false)
+      o.setName('amount')
+       .setDescription('Amount to remove')
+       .setRequired(true)
     ),
 
   async execute(interaction) {
@@ -51,15 +55,8 @@ module.exports = {
     }
 
     const user = interaction.options.getUser('user');
-    const removePoints = interaction.options.getInteger('points') || 0;
-    const removeWins = interaction.options.getInteger('wins') || 0;
-
-    if (removePoints === 0 && removeWins === 0) {
-      return interaction.reply({
-        content: "❌ Provide points or wins to remove",
-        ephemeral: true
-      });
-    }
+    const type = interaction.options.getString('type');
+    const amount = interaction.options.getInteger('amount');
 
     const data = loadData();
     const guildId = interaction.guild.id;
@@ -69,21 +66,24 @@ module.exports = {
       data[guildId][user.id] = { points: 0, wins: 0 };
     }
 
-    // 🔥 SUBTRACT (NO NEGATIVE)
-    data[guildId][user.id].points = Math.max(
+    data[guildId][user.id][type] = Math.max(
       0,
-      data[guildId][user.id].points - removePoints
-    );
-
-    data[guildId][user.id].wins = Math.max(
-      0,
-      data[guildId][user.id].wins - removeWins
+      data[guildId][user.id][type] - amount
     );
 
     saveData(data);
 
+    const embed = new EmbedBuilder()
+      .setTitle("➖ User Updated")
+      .setColor("Orange")
+      .setDescription(
+        `👤 User: <@${user.id}>\n` +
+        `➖ Removed: **${amount} ${type}**\n` +
+        `📊 Total: ${data[guildId][user.id][type]}`
+      );
+
     return interaction.reply({
-      content: `➖ Updated <@${user.id}> → -${removePoints} pts, -${removeWins} wins`,
+      embeds: [embed],
       allowedMentions: { users: [user.id] }
     });
   }

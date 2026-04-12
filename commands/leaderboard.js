@@ -15,27 +15,31 @@ module.exports = {
     }
 
     const data = JSON.parse(fs.readFileSync(file));
-    const guild = data[interaction.guild.id];
+    const guildId = interaction.guild.id;
 
-    if (!guild) {
-      return interaction.reply("❌ No data for this server.");
+    // ✅ STRICT SERVER CHECK
+    if (!data[guildId] || Object.keys(data[guildId]).length === 0) {
+      return interaction.reply("❌ No data for this server yet.");
     }
 
-    const sorted = Object.entries(guild)
+    // ✅ ONLY THIS SERVER DATA
+    const users = Object.entries(data[guildId]);
+
+    // 🔥 SORT BY POINTS
+    const sorted = users
       .sort((a, b) => b[1].points - a[1].points)
       .slice(0, 10);
 
-    const text = sorted.map(([id, stats], i) => {
-      return `**${i + 1}.** <@${id}> — ${stats.points} pts | ${stats.wins} wins`;
-    }).join("\n");
+    // 🎯 FORMAT
+    const text = sorted.map(([id, stats], i) =>
+      `**${i + 1}.** <@${id}> — ⭐ ${stats.points} pts | 🏆 ${stats.wins} wins`
+    ).join("\n");
 
-    return interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("🏆 Server Leaderboard")
-          .setColor("Gold")
-          .setDescription(text || "No players yet")
-      ]
-    });
+    const embed = new EmbedBuilder()
+      .setTitle("🏆 Server Leaderboard")
+      .setColor("Gold")
+      .setDescription(text || "No players yet");
+
+    return interaction.reply({ embeds: [embed] });
   }
 };

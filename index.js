@@ -204,34 +204,5 @@ client.on("messageCreate", async msg => {
   }
 });
 
-  // ===== FAKE INTERACTION =====
-  const fakeInteraction = {
-    user: msg.author,
-    guildId: msg.guild.id,
-    channelId: msg.channel.id,
-    member: msg.member,
-    memberPermissions: msg.member.permissions,
-
-    reply: (data) => msg.reply(data),
-    followUp: (data) => msg.reply(data),
-
-    options: {
-      getString: () => args.join(' '),
-      getInteger: () => {
-        const val = parseInt(args[0]);
-        return isNaN(val) ? null : val;
-      },
-      getRole: () => null
-    }
-  };
-
-  try {
-    await command.execute(fakeInteraction);
-  } catch (err) {
-    console.error(err);
-    msg.reply("❌ Error running command");
-  }
-});
-
 // ===== LOGIN =====
 client.login(TOKEN);

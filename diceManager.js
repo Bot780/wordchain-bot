@@ -61,7 +61,7 @@ function setPrefix(guildId, prefix) {
 // ===== PERMISSION CHECK =====
 function hasPermission(interaction) {
   if (interaction.user.id === OWNER_ID) return true;
-  if (interaction.memberPermissions?.has(8n)) return true; // Administrator
+  if (interaction.memberPermissions?.has('Administrator')) return true;
   const managerRoles = getManagerRoles(interaction.guildId);
   return interaction.member?.roles?.cache?.some(r => managerRoles.includes(r.id));
 }
@@ -71,12 +71,10 @@ const diceGame = {
   active: false,
   lobby: false,
   players: [],
-  mode: null,
-  actualMode: null,
   target: null,
   minRange: 1,
   maxRange: 100,
-  prize: 50,
+  prize: '50 points',
   playerLimit: 20,
   lobbyTime: 60,
   timeLeft: 60,
@@ -85,14 +83,17 @@ const diceGame = {
   lobbyMessage: null,
   lobbyInterval: null,
   cooldowns: new Map(),
-  rolls: []
+
+  // ✅ IMPORTANT
+  rolls: {} // userId: number
 };
 
-// ===== COOLDOWN CHECK =====
+// ===== COOLDOWN =====
 function checkRollCooldown(userId) {
   const now = Date.now();
   const cd = diceGame.cooldowns.get(userId);
   if (cd && now < cd) return Math.ceil((cd - now) / 1000);
+
   diceGame.cooldowns.set(userId, now + 5000);
   return 0;
 }
@@ -102,51 +103,63 @@ function buildLobbyEmbed() {
   return new EmbedBuilder()
     .setTitle('🎲 Dice Roll Event — Lobby')
     .setColor('Orange')
-    .setDescription(`Click **Join Game** to enter!\nGame starts when timer runs out or lobby fills up.`)
     .addFields(
-      { name: '👥 Players', value: diceGame.players.length > 0 ? diceGame.players.map(p => `• <@${p}>`).join('\n') : '*None yet*', inline: false },
-      { name: '👥 Player Count', value: `\`${diceGame.players.length}/${diceGame.playerLimit}\``, inline: true },
-      { name: '⏳ Time Left', value: `\`${diceGame.timeLeft}s\``, inline: true },
-      { name: '🎯 Target', value: `**${diceGame.target}**`, inline: true },
-      { name: '🎲 Range', value: `\`${diceGame.minRange}–${diceGame.maxRange}\``, inline: true },
-      { name: '🏆 Prize', value: `**${diceGame.prize}**`, inline: true }
-    )
-    .setFooter({ text: `Min 2 players required to start` });
+      {
+        name: '👥 Players',
+        value: diceGame.players.length
+          ? diceGame.players.map(p => `• <@${p}>`).join('\n')
+          : '*None yet*'
+      },
+      {
+        name: '👥 Count',
+        value: `\`${diceGame.players.length}/${diceGame.playerLimit}\``,
+        inline: true
+      },
+      {
+        name: '⏳ Time',
+        value: `\`${diceGame.timeLeft}s\``,
+        inline: true
+      },
+      {
+        name: '🎯 Target',
+        value: `\`${diceGame.target ?? '?' }\``,
+        inline: true
+      }
+    );
 }
 
-// ===== JOIN BUTTON ROW =====
+// ===== JOIN BUTTON =====
 function buildJoinRow(disabled = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('joindice')
-      .setLabel(disabled ? 'Game Closed' : 'Join Game 🎲')
+      .setLabel(disabled ? 'Closed' : 'Join 🎲')
       .setStyle(disabled ? ButtonStyle.Secondary : ButtonStyle.Success)
       .setDisabled(disabled)
   );
 }
 
-// ===== RESET GAME =====
+// ===== RESET =====
 function resetDiceGame() {
-  clearInterval(diceGame.lobbyInterval);
-  clearTimeout(diceGame.timer);
+  if (diceGame.lobbyInterval) clearInterval(diceGame.lobbyInterval);
+
   diceGame.active = false;
   diceGame.lobby = false;
   diceGame.players = [];
-  diceGame.mode = null;
-  diceGame.actualMode = null;
   diceGame.target = null;
   diceGame.minRange = 1;
   diceGame.maxRange = 100;
-  diceGame.prize = 50;
+  diceGame.prize = '50 points';
   diceGame.playerLimit = 20;
   diceGame.lobbyTime = 60;
   diceGame.timeLeft = 60;
   diceGame.channelId = null;
   diceGame.guildId = null;
   diceGame.lobbyMessage = null;
-  diceGame.lobbyInterval = null;
   diceGame.cooldowns = new Map();
-  diceGame.rolls = [];
+
+  // ✅ IMPORTANT
+  diceGame.rolls = {};
 }
 
 module.exports = {
@@ -161,6 +174,5 @@ module.exports = {
   addManagerRole,
   removeManagerRole,
   getPrefix,
-  setPrefix,
-  loadManagers
+  setPrefix
 };

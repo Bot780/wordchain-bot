@@ -9,57 +9,37 @@ module.exports = {
   async execute(interaction) {
     if (!diceGame.lobby) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ No Active Lobby')
-            .setDescription('There is no dice event lobby open right now. Wait for an admin to start one!')
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ No Active Lobby')],
         flags: 64
       });
     }
 
     if (interaction.channelId !== diceGame.channelId) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ Wrong Channel')
-            .setDescription(`The dice event is running in <#${diceGame.channelId}>!`)
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ Wrong Channel')],
         flags: 64
       });
     }
 
     if (diceGame.players.includes(interaction.user.id)) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Yellow')
-            .setTitle('⚠️ Already Joined')
-            .setDescription('You have already joined this dice event!')
-        ],
+        embeds: [new EmbedBuilder().setColor('Yellow').setTitle('⚠️ Already Joined')],
         flags: 64
       });
     }
 
     if (diceGame.players.length >= diceGame.playerLimit) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ Lobby Full')
-            .setDescription(`This lobby is full! (\`${diceGame.playerLimit}/${diceGame.playerLimit}\` players)`)
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ Lobby Full')],
         flags: 64
       });
     }
 
     diceGame.players.push(interaction.user.id);
 
-    // ✅ Update lobby UI safely
+    // ✅ SAFE EDIT
     try {
-      if (diceGame.lobbyMessage) {
+      if (diceGame.lobbyMessage?.edit) {
         await diceGame.lobbyMessage.edit({
           embeds: [buildLobbyEmbed()],
           components: [buildJoinRow()]
@@ -78,49 +58,36 @@ module.exports = {
     });
   },
 
-  // ===== BUTTON HANDLER =====
   async handleInteraction(interaction) {
     if (!interaction.isButton()) return false;
     if (interaction.customId !== 'joindice') return false;
 
     if (!diceGame.lobby) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setDescription('❌ Lobby is no longer open.')
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Lobby closed')],
         flags: 64
       });
     }
 
     if (diceGame.players.includes(interaction.user.id)) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Yellow')
-            .setDescription('⚠️ You already joined!')
-        ],
+        embeds: [new EmbedBuilder().setColor('Yellow').setDescription('⚠️ Already joined')],
         flags: 64
       });
     }
 
     if (diceGame.players.length >= diceGame.playerLimit) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setDescription('❌ Lobby is full!')
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Lobby full')],
         flags: 64
       });
     }
 
     diceGame.players.push(interaction.user.id);
 
-    // ✅ Update lobby UI safely
+    // ✅ SAFE EDIT
     try {
-      if (diceGame.lobbyMessage) {
+      if (diceGame.lobbyMessage?.edit) {
         await diceGame.lobbyMessage.edit({
           embeds: [buildLobbyEmbed()],
           components: [buildJoinRow()]

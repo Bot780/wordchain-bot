@@ -13,66 +13,62 @@ module.exports = {
     .setDescription('Start a dice roll event (Admin/Manager only)')
     .addIntegerOption(opt =>
       opt.setName('target')
-        .setDescription('Target number players must roll (leave empty = random)')
-        .setRequired(false)
+        .setDescription('Target number (leave empty = random)')
     )
     .addIntegerOption(opt =>
       opt.setName('min')
         .setDescription('Minimum roll range (default: 1)')
-        .setRequired(false)
         .setMinValue(1)
     )
     .addIntegerOption(opt =>
       opt.setName('max')
         .setDescription('Maximum roll range (default: 100)')
-        .setRequired(false)
         .setMinValue(2)
     )
     .addStringOption(opt =>
       opt.setName('prize')
-        .setDescription('Prize for the winner e.g. "500 points" or "Nitro"')
-        .setRequired(false)
+        .setDescription('Prize (e.g. "500 points", "Nitro")')
     )
     .addIntegerOption(opt =>
       opt.setName('playerlimit')
-        .setDescription('Max players allowed (default: 20)')
-        .setRequired(false)
+        .setDescription('Max players (default: 20)')
         .setMinValue(2)
         .setMaxValue(100)
     )
     .addIntegerOption(opt =>
       opt.setName('lobbytime')
-        .setDescription('Lobby open duration in seconds (default: 60)')
-        .setRequired(false)
+        .setDescription('Lobby time in seconds (default: 60)')
         .setMinValue(10)
         .setMaxValue(300)
     ),
 
-  async execute(interaction, game) {
+  async execute(interaction) {
+    // ===== PERMISSION =====
     if (!hasPermission(interaction)) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ No Permission')
-            .setDescription('You need to be an **Admin** or **Game Manager** to start a dice event.')
+            .setDescription('You need Admin or Manager role.')
         ],
         flags: 64
       });
     }
 
+    // ===== GAME CHECK =====
     if (diceGame.active || diceGame.lobby) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ Game Already Running')
-            .setDescription('A dice game is already active! Use `/stopdice` to stop it first.')
         ],
         flags: 64
       });
     }
 
+    // ===== OPTIONS =====
     const minRange = interaction.options.getInteger('min') || 1;
     const maxRange = interaction.options.getInteger('max') || 100;
 
@@ -82,7 +78,6 @@ module.exports = {
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ Invalid Range')
-            .setDescription('Minimum range must be less than maximum range.')
         ],
         flags: 64
       });
@@ -93,10 +88,9 @@ module.exports = {
       ? Math.min(Math.max(rawTarget, minRange), maxRange)
       : Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
 
+    // ===== SET GAME =====
     diceGame.lobby = true;
     diceGame.active = false;
-    diceGame.mode = null;
-    diceGame.actualMode = null;
     diceGame.target = target;
     diceGame.minRange = minRange;
     diceGame.maxRange = maxRange;
@@ -110,51 +104,61 @@ module.exports = {
     diceGame.rolls = [];
     diceGame.cooldowns = new Map();
 
+    // ===== SEND LOBBY =====
     await interaction.reply({
       embeds: [buildLobbyEmbed()],
       components: [buildJoinRow()]
     });
 
-    diceGame.lobbyMessage = await interaction.fetchReply();
+    // ===== SAFE FETCH (FIXED) =====
+    if (interaction.fetchReply) {
+      diceGame.lobbyMessage = await interaction.fetchReply();
+    } else {
+      diceGame.lobbyMessage = null;
+    }
 
+    // ===== TIMER =====
     diceGame.lobbyInterval = setInterval(async () => {
       if (!diceGame.lobby) return;
 
       diceGame.timeLeft--;
 
       if (diceGame.timeLeft === 30) {
-        interaction.channel.send({
-          embeds: [new EmbedBuilder().setColor('Yellow').setDescription('⚠️ **30 seconds** left to join the dice event!')]
-        });
+        interaction.channel.send("⚠️ 30 seconds left!");
       }
+
       if (diceGame.timeLeft === 10) {
-        interaction.channel.send({
-          embeds: [new EmbedBuilder().setColor('Orange').setDescription('⚠️ **10 seconds** left to join the dice event!')]
-        });
+        interaction.channel.send("⚠️ 10 seconds left!");
       }
 
-      try {
-        await diceGame.lobbyMessage.edit({
-          embeds: [buildLobbyEmbed()],
-          components: [buildJoinRow()]
-        });
-      } catch {}
+      // SAFE EDIT
+      if (diceGame.lobbyMessage?.edit) {
+        try {
+          await diceGame.lobbyMessage.edit({
+            embeds: [buildLobbyEmbed()],
+            components: [buildJoinRow()]
+          });
+        } catch {}
+      }
 
+      // ===== END LOBBY =====
       if (diceGame.timeLeft <= 0) {
         clearInterval(diceGame.lobbyInterval);
 
         if (diceGame.players.length < 2) {
-          try {
-            await diceGame.lobbyMessage.edit({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor('Red')
-                  .setTitle('❌ Dice Event Cancelled')
-                  .setDescription('Not enough players joined. Minimum **2 players** required.')
-              ],
-              components: [buildJoinRow(true)]
-            });
-          } catch {}
+          if (diceGame.lobbyMessage?.edit) {
+            try {
+              await diceGame.lobbyMessage.edit({
+                embeds: [
+                  new EmbedBuilder()
+                    .setColor('Red')
+                    .setTitle('❌ Not Enough Players')
+                ],
+                components: [buildJoinRow(true)]
+              });
+            } catch {}
+          }
+
           resetDiceGame();
           return;
         }
@@ -162,31 +166,29 @@ module.exports = {
         diceGame.lobby = false;
         diceGame.active = true;
 
-        try {
-          await diceGame.lobbyMessage.edit({
-            embeds: [
-              new EmbedBuilder()
-                .setColor('Green')
-                .setTitle('🎲 Lobby Closed — Game is Live!')
-                .setDescription('Lobby is now closed. Good luck to all players!')
-            ],
-            components: [buildJoinRow(true)]
-          });
-        } catch {}
+        if (diceGame.lobbyMessage?.edit) {
+          try {
+            await diceGame.lobbyMessage.edit({
+              embeds: [
+                new EmbedBuilder()
+                  .setColor('Green')
+                  .setTitle('🎲 Game Started!')
+              ],
+              components: [buildJoinRow(true)]
+            });
+          } catch {}
+        }
 
         interaction.channel.send({
           embeds: [
             new EmbedBuilder()
-              .setTitle('🎲 Dice Event — Game On!')
+              .setTitle('🎲 Dice Game Live!')
               .setColor('Orange')
-              .setDescription('Use `/rolldice` to roll! First to hit the **exact target** wins!')
               .addFields(
                 { name: '🎯 Target', value: `**${diceGame.target}**`, inline: true },
-                { name: '🎲 Range', value: `\`${minRange}–${maxRange}\``, inline: true },
-                { name: '🏆 Prize', value: `**${diceGame.prize}**`, inline: true },
-                { name: '👥 Players', value: `\`${diceGame.players.length}\` players joined`, inline: true }
+                { name: '🎲 Range', value: `\`${minRange}-${maxRange}\``, inline: true },
+                { name: '🏆 Prize', value: `${diceGame.prize}`, inline: true }
               )
-              .setFooter({ text: '⏱ 5 second cooldown between rolls!' })
           ]
         });
       }

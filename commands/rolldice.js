@@ -7,43 +7,48 @@ module.exports = {
     .setName('rolldice')
     .setDescription('Roll the dice in the active dice event!'),
 
-  async execute(interaction, game) {
+  async execute(interaction) {
+
+    // ===== NO GAME =====
     if (!diceGame.active) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ No Active Game')
-            .setDescription('There is no dice game running right now! Wait for the lobby to start.')
+            .setDescription('Wait for the lobby to start.')
         ],
         flags: 64
       });
     }
 
+    // ===== WRONG CHANNEL =====
     if (interaction.channelId !== diceGame.channelId) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ Wrong Channel')
-            .setDescription(`The dice event is running in <#${diceGame.channelId}>!`)
+            .setDescription(`Game is in <#${diceGame.channelId}>`)
         ],
         flags: 64
       });
     }
 
+    // ===== NOT JOINED =====
     if (!diceGame.players.includes(interaction.user.id)) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ Not a Participant')
-            .setDescription('You did not join this dice event! You can join the next one.')
+            .setDescription('You didn’t join this event.')
         ],
         flags: 64
       });
     }
 
+    // ===== COOLDOWN =====
     const cd = checkRollCooldown(interaction.user.id);
     if (cd > 0) {
       return interaction.reply({
@@ -51,22 +56,32 @@ module.exports = {
           new EmbedBuilder()
             .setColor('Yellow')
             .setTitle('⏳ Cooldown')
-            .setDescription(`You must wait **${cd} second${cd > 1 ? 's' : ''}** before rolling again!`)
+            .setDescription(`Wait **${cd}s** before rolling again!`)
         ],
         flags: 64
       });
     }
 
+    // ===== ROLL =====
     const { minRange, maxRange, target } = diceGame;
     const rolled = Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
     const hit = rolled === target;
 
-    diceGame.rolls.push({ userId: interaction.user.id, rolled, hit });
+    diceGame.rolls.push({
+      userId: interaction.user.id,
+      rolled,
+      hit
+    });
 
+    // ===== WIN =====
     if (hit) {
+
+      // Support string prize like "500 points"
       const prizePoints = parseInt(diceGame.prize) || 0;
+
       if (prizePoints > 0) {
         const player = getPlayer(interaction.user.id, interaction.guildId);
+
         updatePlayer(interaction.user.id, interaction.guildId, {
           points: (player.points || 0) + prizePoints
         });
@@ -80,21 +95,20 @@ module.exports = {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
-            .setTitle('🎉 We Have a Winner!')
+            .setTitle('🎉 Winner!')
             .setColor('Gold')
-            .setDescription(`<@${interaction.user.id}> hit the exact target and won the dice event!`)
+            .setDescription(`<@${interaction.user.id}> hit the target!`)
             .addFields(
-              { name: '🎲 Winning Roll', value: `\`${rolled}\``, inline: true },
-              { name: '🎯 Target Was', value: `\`${target}\``, inline: true },
+              { name: '🎲 Roll', value: `\`${rolled}\``, inline: true },
+              { name: '🎯 Target', value: `\`${target}\``, inline: true },
               { name: '🏆 Prize', value: `${prize}`, inline: true },
               { name: '👥 Total Rolls', value: `\`${totalRolls}\``, inline: true }
             )
-            .setFooter({ text: 'Congratulations! 🎊' })
         ]
       });
     }
 
-    // ===== MISS — public =====
+    // ===== MISS =====
     return interaction.reply({
       embeds: [
         new EmbedBuilder()
@@ -106,7 +120,9 @@ module.exports = {
             { name: '🎯 Target', value: `**${target}**`, inline: true },
             { name: '🎲 Range', value: `\`${minRange}–${maxRange}\``, inline: true }
           )
-          .setFooter({ text: `Total rolls so far: ${diceGame.rolls.length} • 5s cooldown applies` })
+          .setFooter({
+            text: `Rolls: ${diceGame.rolls.length} • 5s cooldown`
+          })
       ]
     });
   }

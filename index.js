@@ -138,7 +138,7 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// ===== HYBRID PREFIX SYSTEM =====
+// ===== HYBRID PREFIX SYSTEM ====
 client.on("messageCreate", async msg => {
   if (msg.author.bot || !msg.guild) return;
 
@@ -146,7 +146,7 @@ client.on("messageCreate", async msg => {
   const prefix = getPrefix(msg.guild.id);
 
   if (!msg.content.startsWith(prefix)) {
-    return game.handleMessage(msg); // keep word game working
+    return game.handleMessage(msg);
   }
 
   const args = msg.content.slice(prefix.length).trim().split(/ +/);
@@ -154,6 +154,55 @@ client.on("messageCreate", async msg => {
 
   const command = client.commands.get(cmdName);
   if (!command) return;
+
+  // ===== SAFE SEND (NO PING) =====
+  const send = (data) => {
+    if (typeof data === "string") {
+      return msg.channel.send({ content: data });
+    }
+    return msg.channel.send(data);
+  };
+
+  // ===== FAKE INTERACTION =====
+  const fakeInteraction = {
+    user: msg.author,
+    guildId: msg.guild.id,
+    channelId: msg.channel.id,
+    member: msg.member,
+    memberPermissions: msg.member.permissions,
+
+    replied: false,
+
+    reply: async (data) => {
+      fakeInteraction.replied = true;
+      return send(data);
+    },
+
+    followUp: async (data) => {
+      return send(data);
+    },
+
+    options: {
+      getString: () => args.join(' '),
+      getInteger: () => {
+        const val = parseInt(args[0]);
+        return isNaN(val) ? null : val;
+      },
+      getRole: () => null
+    }
+  };
+
+  try {
+    await command.execute(fakeInteraction);
+  } catch (err) {
+    console.error(err);
+
+    // ✅ prevent double error spam
+    if (!fakeInteraction.replied) {
+      send("❌ Error running command");
+    }
+  }
+});
 
   // ===== FAKE INTERACTION =====
   const fakeInteraction = {

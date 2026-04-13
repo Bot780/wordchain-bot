@@ -6,7 +6,7 @@ module.exports = {
     .setName('forcestartdice')
     .setDescription('Force start the dice event immediately (Admin/Manager only)'),
 
-  async execute(interaction) {
+  async execute(interaction, game) {
     if (!hasPermission(interaction)) {
       return interaction.reply({
         embeds: [
@@ -43,43 +43,44 @@ module.exports = {
       });
     }
 
-    // ✅ stop lobby timer safely
-    if (diceGame.lobbyInterval) {
-      clearInterval(diceGame.lobbyInterval);
-    }
-
+    clearInterval(diceGame.lobbyInterval);
     diceGame.lobby = false;
     diceGame.active = true;
 
-    // ✅ update lobby message safely
     try {
-      if (diceGame.lobbyMessage) {
-        await diceGame.lobbyMessage.edit({
-          embeds: [
-            new EmbedBuilder()
-              .setColor('Green')
-              .setTitle('🎲 Lobby Closed — Game is Live!')
-              .setDescription('Force started by an admin. Good luck!')
-          ],
-          components: [buildJoinRow(true)]
-        });
-      }
+      await diceGame.lobbyMessage.edit({
+        embeds: [
+          new EmbedBuilder()
+            .setColor('Green')
+            .setTitle('🎲 Lobby Closed — Game is Live!')
+            .setDescription('Force started by an admin. Good luck!')
+        ],
+        components: [buildJoinRow(true)]
+      });
     } catch {}
 
+    // Confirm to admin ephemerally
     await interaction.reply({
+      embeds: [new EmbedBuilder().setColor('Green').setDescription('✅ Dice event force started!')],
+      flags: 64
+    });
+
+    // Send game on msg to channel publicly
+    await interaction.channel.send({
       embeds: [
         new EmbedBuilder()
           .setTitle('🎲 Dice Event — Game On!')
           .setColor('Orange')
-          .setDescription('Use `/rolldice` to roll! Hit the exact target to win!')
+          .setDescription('Use `/rolldice` to roll! First to hit the **exact target** wins!')
           .addFields(
-            { name: '🎯 Target', value: `\`${diceGame.target}\``, inline: true },
+            { name: '🎯 Target', value: `**${diceGame.target}**`, inline: true },
             { name: '🎲 Range', value: `\`${diceGame.minRange}–${diceGame.maxRange}\``, inline: true },
-            { name: '🏆 Prize', value: `${diceGame.prize}`, inline: true },
+            { name: '🏆 Prize', value: `**${diceGame.prize}**`, inline: true },
             { name: '👥 Players', value: `\`${diceGame.players.length}\` players`, inline: true }
           )
-          .setFooter({ text: '⏱ 5s cooldown between rolls' })
+          .setFooter({ text: '⏱ 5 second cooldown between rolls!' })
       ]
     });
   }
 };
+

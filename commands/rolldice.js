@@ -103,6 +103,7 @@ module.exports = {
           .addFields(
             { name: '👤 Player', value: `<@${interaction.user.id}>`, inline: true },
             { name: '🎲 Rolled', value: `\`${rolled}\``, inline: true },
+            { name: '🎯 Target', value: `**${target}**`, inline: true },
             { name: '🎲 Range', value: `\`${minRange}–${maxRange}\``, inline: true }
           )
           .setFooter({ text: `Total rolls so far: ${diceGame.rolls.length} • 5s cooldown applies` })
@@ -110,4 +111,3 @@ module.exports = {
     });
   }
 };
-

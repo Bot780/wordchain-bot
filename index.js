@@ -5,6 +5,7 @@ const fs = require('fs');
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = "1492188016649961653";
 
+// ===== WEB SERVER =====
 const express = require("express");
 const app = express();
 
@@ -13,6 +14,7 @@ app.get("/", (req, res) => res.send("Bot is alive"));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("🌐 Web server running"));
 
+// ===== ERROR HANDLING =====
 process.on("uncaughtException", (err) => {
   console.error("Crash:", err);
   process.exit(1);
@@ -23,6 +25,7 @@ process.on("unhandledRejection", (err) => {
   process.exit(1);
 });
 
+// ===== CLIENT =====
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -33,7 +36,6 @@ const client = new Client({
 
 // ===== COMMAND HANDLER =====
 client.commands = new Map();
-
 const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
 let commandsData = [];
 
@@ -64,7 +66,7 @@ const game = require('./game');
 // ===== INTERACTIONS =====
 client.on('interactionCreate', async interaction => {
 
-  // ===== CONFIG PANEL =====
+  // ===== CONFIG =====
   const configCmd = client.commands.get('config');
   if (
     (interaction.isButton() ||
@@ -76,7 +78,7 @@ client.on('interactionCreate', async interaction => {
     if (handled !== false) return;
   }
 
-  // ===== PROFILE BUTTON =====
+  // ===== PROFILE =====
   if (interaction.isButton()) {
     const profile = client.commands.get('profile');
     if (profile?.handleInteraction) {
@@ -103,7 +105,7 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // ===== JOIN DICE BUTTON ===== 🔥 (ADDED)
+  // ===== JOIN DICE BUTTON =====
   if (interaction.isButton()) {
     const joinDice = client.commands.get('joindice');
     if (joinDice?.handleInteraction) {
@@ -136,29 +138,50 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// ===== MESSAGE (PREFIX + GAME) =====
-client.on("messageCreate", msg => {
+// ===== HYBRID PREFIX SYSTEM =====
+client.on("messageCreate", async msg => {
   if (msg.author.bot || !msg.guild) return;
 
   const { getPrefix } = require('./diceManager');
   const prefix = getPrefix(msg.guild.id);
 
-  // ===== PREFIX COMMANDS =====
-  if (msg.content.startsWith(prefix)) {
-    const args = msg.content.slice(prefix.length).trim().split(/ +/);
-    const cmdName = args.shift().toLowerCase();
-
-    if (cmdName === 'help') {
-      return msg.reply('📖 Help command here');
-    }
-
-    if (cmdName === 'roll') {
-      return msg.reply('🎲 Roll command here');
-    }
+  if (!msg.content.startsWith(prefix)) {
+    return game.handleMessage(msg); // keep word game working
   }
 
-  // ===== WORD GAME =====
-  game.handleMessage(msg);
+  const args = msg.content.slice(prefix.length).trim().split(/ +/);
+  const cmdName = args.shift().toLowerCase();
+
+  const command = client.commands.get(cmdName);
+  if (!command) return;
+
+  // ===== FAKE INTERACTION =====
+  const fakeInteraction = {
+    user: msg.author,
+    guildId: msg.guild.id,
+    channelId: msg.channel.id,
+    member: msg.member,
+    memberPermissions: msg.member.permissions,
+
+    reply: (data) => msg.reply(data),
+    followUp: (data) => msg.reply(data),
+
+    options: {
+      getString: () => args.join(' '),
+      getInteger: () => {
+        const val = parseInt(args[0]);
+        return isNaN(val) ? null : val;
+      },
+      getRole: () => null
+    }
+  };
+
+  try {
+    await command.execute(fakeInteraction);
+  } catch (err) {
+    console.error(err);
+    msg.reply("❌ Error running command");
+  }
 });
 
 // ===== LOGIN =====

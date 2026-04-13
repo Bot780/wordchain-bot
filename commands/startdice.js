@@ -181,8 +181,9 @@ module.exports = {
               .setColor('Orange')
               .setDescription('Use `/rolldice` to roll! First to hit the **exact target** wins!')
               .addFields(
+                { name: '🎯 Target', value: `**${diceGame.target}**`, inline: true },
                 { name: '🎲 Range', value: `\`${minRange}–${maxRange}\``, inline: true },
-                { name: '🏆 Prize', value: `${diceGame.prize}`, inline: true },
+                { name: '🏆 Prize', value: `**${diceGame.prize}**`, inline: true },
                 { name: '👥 Players', value: `\`${diceGame.players.length}\` players joined`, inline: true }
               )
               .setFooter({ text: '⏱ 5 second cooldown between rolls!' })

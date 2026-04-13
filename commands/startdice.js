@@ -10,60 +10,34 @@ const {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('startdice')
-    .setDescription('Start a dice roll event (Admin/Manager only)')
+    .setDescription('Start a dice roll event')
     .addIntegerOption(opt =>
-      opt.setName('target')
-        .setDescription('Target number (leave empty = random)')
-    )
+      opt.setName('target').setDescription('Target number'))
     .addIntegerOption(opt =>
-      opt.setName('min')
-        .setDescription('Minimum roll range (default: 1)')
-        .setMinValue(1)
-    )
+      opt.setName('min').setDescription('Min range').setMinValue(1))
     .addIntegerOption(opt =>
-      opt.setName('max')
-        .setDescription('Maximum roll range (default: 100)')
-        .setMinValue(2)
-    )
+      opt.setName('max').setDescription('Max range').setMinValue(2))
     .addStringOption(opt =>
-      opt.setName('prize')
-        .setDescription('Prize (e.g. "500 points", "Nitro")')
-    )
+      opt.setName('prize').setDescription('Prize'))
     .addIntegerOption(opt =>
-      opt.setName('playerlimit')
-        .setDescription('Max players (default: 20)')
-        .setMinValue(2)
-        .setMaxValue(100)
-    )
+      opt.setName('playerlimit').setDescription('Max players').setMinValue(2).setMaxValue(100))
     .addIntegerOption(opt =>
-      opt.setName('lobbytime')
-        .setDescription('Lobby time in seconds (default: 60)')
-        .setMinValue(10)
-        .setMaxValue(300)
-    ),
+      opt.setName('lobbytime').setDescription('Lobby time').setMinValue(10).setMaxValue(300)),
 
   async execute(interaction) {
+
     // ===== PERMISSION =====
     if (!hasPermission(interaction)) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ No Permission')
-            .setDescription('You need Admin or Manager role.')
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ No Permission')],
         flags: 64
       });
     }
 
-    // ===== GAME CHECK =====
+    // ===== GAME RUNNING =====
     if (diceGame.active || diceGame.lobby) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ Game Already Running')
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ Game Already Running')],
         flags: 64
       });
     }
@@ -74,11 +48,7 @@ module.exports = {
 
     if (minRange >= maxRange) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ Invalid Range')
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ Invalid Range')],
         flags: 64
       });
     }
@@ -104,18 +74,26 @@ module.exports = {
     diceGame.rolls = [];
     diceGame.cooldowns = new Map();
 
-    // ===== SEND LOBBY =====
-    await interaction.reply({
-      embeds: [buildLobbyEmbed()],
-      components: [buildJoinRow()]
-    });
+    // ===== FIXED MESSAGE SYSTEM 🔥 =====
+    let sentMessage;
 
-    // ===== SAFE FETCH (FIXED) =====
     if (interaction.fetchReply) {
-      diceGame.lobbyMessage = await interaction.fetchReply();
+      // SLASH
+      await interaction.reply({
+        embeds: [buildLobbyEmbed()],
+        components: [buildJoinRow()]
+      });
+
+      sentMessage = await interaction.fetchReply();
     } else {
-      diceGame.lobbyMessage = null;
+      // PREFIX
+      sentMessage = await interaction.reply({
+        embeds: [buildLobbyEmbed()],
+        components: [buildJoinRow()]
+      });
     }
+
+    diceGame.lobbyMessage = sentMessage;
 
     // ===== TIMER =====
     diceGame.lobbyInterval = setInterval(async () => {
@@ -131,32 +109,26 @@ module.exports = {
         interaction.channel.send("⚠️ 10 seconds left!");
       }
 
-      // SAFE EDIT
-      if (diceGame.lobbyMessage?.edit) {
-        try {
+      // ✅ LIVE UPDATE FIXED
+      try {
+        if (diceGame.lobbyMessage?.edit) {
           await diceGame.lobbyMessage.edit({
             embeds: [buildLobbyEmbed()],
             components: [buildJoinRow()]
           });
-        } catch {}
-      }
+        }
+      } catch {}
 
-      // ===== END LOBBY =====
+      // ===== END =====
       if (diceGame.timeLeft <= 0) {
         clearInterval(diceGame.lobbyInterval);
 
         if (diceGame.players.length < 2) {
           if (diceGame.lobbyMessage?.edit) {
-            try {
-              await diceGame.lobbyMessage.edit({
-                embeds: [
-                  new EmbedBuilder()
-                    .setColor('Red')
-                    .setTitle('❌ Not Enough Players')
-                ],
-                components: [buildJoinRow(true)]
-              });
-            } catch {}
+            await diceGame.lobbyMessage.edit({
+              embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ Not Enough Players')],
+              components: [buildJoinRow(true)]
+            });
           }
 
           resetDiceGame();
@@ -167,16 +139,10 @@ module.exports = {
         diceGame.active = true;
 
         if (diceGame.lobbyMessage?.edit) {
-          try {
-            await diceGame.lobbyMessage.edit({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor('Green')
-                  .setTitle('🎲 Game Started!')
-              ],
-              components: [buildJoinRow(true)]
-            });
-          } catch {}
+          await diceGame.lobbyMessage.edit({
+            embeds: [new EmbedBuilder().setColor('Green').setTitle('🎲 Game Started!')],
+            components: [buildJoinRow(true)]
+          });
         }
 
         interaction.channel.send({
@@ -192,6 +158,7 @@ module.exports = {
           ]
         });
       }
+
     }, 1000);
   }
 };

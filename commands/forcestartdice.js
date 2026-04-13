@@ -6,7 +6,8 @@ module.exports = {
     .setName('forcestartdice')
     .setDescription('Force start the dice event immediately (Admin/Manager only)'),
 
-  async execute(interaction, game) {
+  async execute(interaction) {
+
     if (!hasPermission(interaction)) {
       return interaction.reply({
         embeds: [
@@ -43,30 +44,46 @@ module.exports = {
       });
     }
 
+    // ===== STOP TIMER =====
     clearInterval(diceGame.lobbyInterval);
+
     diceGame.lobby = false;
     diceGame.active = true;
 
+    // ===== UPDATE LOBBY MESSAGE =====
     try {
-      await diceGame.lobbyMessage.edit({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Green')
-            .setTitle('🎲 Lobby Closed — Game is Live!')
-            .setDescription('Force started by an admin. Good luck!')
-        ],
-        components: [buildJoinRow(true)]
-      });
+      if (diceGame.lobbyMessage?.edit) {
+        await diceGame.lobbyMessage.edit({
+          embeds: [
+            new EmbedBuilder()
+              .setColor('Green')
+              .setTitle('🎲 Lobby Closed — Game is Live!')
+              .setDescription('Force started by an admin. Good luck!')
+          ],
+          components: [buildJoinRow(true)]
+        });
+      }
     } catch {}
 
-    // Confirm to admin ephemerally
+    // ===== REPLY TO ADMIN =====
     await interaction.reply({
-      embeds: [new EmbedBuilder().setColor('Green').setDescription('✅ Dice event force started!')],
+      embeds: [
+        new EmbedBuilder()
+          .setColor('Green')
+          .setDescription('✅ Dice event force started!')
+      ],
       flags: 64
     });
 
-    // Send game on msg to channel publicly
-    await interaction.channel.send({
+    // ===== SAFE CHANNEL =====
+    const channel =
+      interaction.channel ||
+      interaction.client?.channels?.cache?.get(interaction.channelId);
+
+    if (!channel) return;
+
+    // ===== PUBLIC GAME MESSAGE =====
+    channel.send({
       embeds: [
         new EmbedBuilder()
           .setTitle('🎲 Dice Event — Game On!')
@@ -83,4 +100,3 @@ module.exports = {
     });
   }
 };
-

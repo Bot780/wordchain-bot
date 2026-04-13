@@ -6,7 +6,8 @@ module.exports = {
     .setName('stopdice')
     .setDescription('Stop the current dice event (Admin/Manager only)'),
 
-  async execute(interaction, game) {
+  async execute(interaction) {
+
     if (!hasPermission(interaction)) {
       return interaction.reply({
         embeds: [
@@ -34,38 +35,49 @@ module.exports = {
     const target = diceGame.target;
     const totalRolls = diceGame.rolls.length;
 
-    // Find closest roll — best (closest) roll per user, then find overall closest
+    // ===== FIND CLOSEST =====
     let closestRoll = null;
+
     if (diceGame.rolls.length > 0) {
       const bestPerUser = {};
+
       for (const r of diceGame.rolls) {
         const dist = Math.abs(r.rolled - target);
-        if (!bestPerUser[r.userId] || dist < Math.abs(bestPerUser[r.userId].rolled - target)) {
+
+        if (
+          !bestPerUser[r.userId] ||
+          dist < Math.abs(bestPerUser[r.userId].rolled - target)
+        ) {
           bestPerUser[r.userId] = r;
         }
       }
+
       closestRoll = Object.values(bestPerUser).reduce((best, r) =>
         Math.abs(r.rolled - target) < Math.abs(best.rolled - target) ? r : best
       );
     }
 
-    // Disable lobby message if still in lobby
+    // ===== DISABLE LOBBY MESSAGE =====
     if (diceGame.lobby && diceGame.lobbyMessage) {
       try {
-        await diceGame.lobbyMessage.edit({
-          embeds: [
-            new EmbedBuilder()
-              .setColor('Red')
-              .setTitle('🛑 Dice Event Cancelled')
-              .setDescription('This lobby was closed by an admin.')
-          ],
-          components: [buildJoinRow(true)]
-        });
+        if (diceGame.lobbyMessage.edit) {
+          await diceGame.lobbyMessage.edit({
+            embeds: [
+              new EmbedBuilder()
+                .setColor('Red')
+                .setTitle('🛑 Dice Event Cancelled')
+                .setDescription('This lobby was closed by an admin.')
+            ],
+            components: [buildJoinRow(true)]
+          });
+        }
       } catch {}
     }
 
+    // ===== RESET GAME =====
     resetDiceGame();
 
+    // ===== FINAL RESPONSE =====
     return interaction.reply({
       embeds: [
         new EmbedBuilder()
@@ -87,4 +99,3 @@ module.exports = {
     });
   }
 };
-

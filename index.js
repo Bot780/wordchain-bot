@@ -5,23 +5,11 @@ const fs = require('fs');
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = "1492188016649961653";
 
-// ===== WEB SERVER =====
+// ===== WEB =====
 const express = require("express");
 const app = express();
-
 app.get("/", (req, res) => res.send("Bot is alive"));
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("🌐 Web server running"));
-
-// ===== ERROR HANDLING =====
-process.on("uncaughtException", (err) => {
-  console.error("Crash:", err);
-});
-
-process.on("unhandledRejection", (err) => {
-  console.error("Promise Error:", err);
-});
+app.listen(process.env.PORT || 3000);
 
 // ===== CLIENT =====
 const client = new Client({
@@ -32,7 +20,7 @@ const client = new Client({
   ]
 });
 
-// ===== COMMAND HANDLER =====
+// ===== COMMANDS =====
 client.commands = new Map();
 const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
 const commandsData = [];
@@ -43,130 +31,43 @@ for (const file of commandFiles) {
   commandsData.push(cmd.data.toJSON());
 }
 
-// ===== REGISTER COMMANDS =====
+// ===== REGISTER =====
 const rest = new REST({ version: '10' }).setToken(TOKEN);
-
 (async () => {
-  try {
-    await rest.put(
-      Routes.applicationCommands(CLIENT_ID),
-      { body: commandsData }
-    );
-    console.log("✅ Commands registered");
-  } catch (err) {
-    console.error(err);
-  }
+  await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commandsData });
+  console.log("✅ Commands registered");
 })();
 
-// ===== LOAD GAME =====
+// ===== GAME =====
 const game = require('./game');
 
 // ===== INTERACTIONS =====
 client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
-  // ===== CONFIG =====
-  const configCmd = client.commands.get('config');
-  if (
-    (interaction.isButton() ||
-     interaction.isStringSelectMenu() ||
-     interaction.isModalSubmit()) &&
-    configCmd?.handleInteraction
-  ) {
-    const handled = await configCmd.handleInteraction(interaction);
-    if (handled !== false) return;
-  }
+  const cmd = client.commands.get(interaction.commandName);
 
-  // ===== PROFILE =====
-  if (interaction.isButton()) {
-    const profile = client.commands.get('profile');
-    if (profile?.handleInteraction) {
-      const handled = await profile.handleInteraction(interaction);
-      if (handled !== false) return;
-    }
-  }
-
-  // ===== LEADERBOARD =====
-  if (interaction.isButton() || interaction.isStringSelectMenu()) {
-    const leaderboard = client.commands.get('leaderboard');
-    if (leaderboard?.handleInteraction) {
-      const handled = await leaderboard.handleInteraction(interaction);
-      if (handled !== false) return;
-    }
-  }
-
-  // ===== HOWTOPLAY =====
-  if (interaction.isButton()) {
-    const howto = client.commands.get('howtoplay');
-    if (howto?.handleInteraction) {
-      const handled = await howto.handleInteraction(interaction);
-      if (handled !== false) return;
-    }
-  }
-
-  // ===== JOIN DICE BUTTON =====
+  // BUTTON (joindice)
   if (interaction.isButton()) {
     const joinDice = client.commands.get('joindice');
-    if (joinDice?.handleInteraction) {
-      const handled = await joinDice.handleInteraction(interaction);
-      if (handled !== false) return;
-    }
+    if (joinDice?.handleInteraction) return joinDice.handleInteraction(interaction);
   }
 
-  // ===== GAME BUTTON =====
-  if (interaction.isButton()) {
-    return game.handleButton(interaction);
-  }
+  if (!cmd) return;
 
-  // ===== SLASH COMMAND =====
-  if (interaction.isChatInputCommand()) {
-    const cmd = client.commands.get(interaction.commandName);
-    if (!cmd) return;
-
-    try {
-      let replied = false;
-
-      const safeInteraction = {
-        ...interaction,
-
-        reply: async (data) => {
-          if (!replied) {
-            replied = true;
-            return interaction.reply(data);
-          } else {
-            return interaction.followUp(data);
-          }
-        },
-
-        editReply: async (data) => {
-          if (interaction.deferred) {
-            return interaction.editReply(data);
-          } else {
-            return interaction.reply(data);
-          }
-        },
-
-        deferReply: async () => {
-          if (!interaction.deferred && !interaction.replied) {
-            return interaction.deferReply();
-          }
-        }
-      };
-
-      await cmd.execute(safeInteraction, game);
-
-    } catch (err) {
-      console.error(err);
-
-      if (!interaction.replied && !interaction.deferred) {
-        interaction.reply("❌ Error");
-      } else {
-        interaction.followUp("❌ Error");
-      }
+  try {
+    await cmd.execute(interaction, game);
+  } catch (err) {
+    console.error(err);
+    if (interaction.replied) {
+      interaction.followUp("❌ Error");
+    } else {
+      interaction.reply("❌ Error");
     }
   }
 });
 
-// ===== HYBRID PREFIX SYSTEM =====
+// ===== PREFIX SYSTEM =====
 client.on("messageCreate", async msg => {
   if (msg.author.bot || !msg.guild) return;
 
@@ -179,36 +80,20 @@ client.on("messageCreate", async msg => {
 
   const args = msg.content.slice(prefix.length).trim().split(/ +/);
   const cmdName = args.shift().toLowerCase();
-
   const command = client.commands.get(cmdName);
   if (!command) return;
-
-  const send = (data) => {
-    if (typeof data === "string") {
-      return msg.channel.send({ content: data });
-    }
-    return msg.channel.send(data);
-  };
 
   const fakeInteraction = {
     user: msg.author,
     guildId: msg.guild.id,
     channelId: msg.channel.id,
+    channel: msg.channel,
+    client: client,
     member: msg.member,
     memberPermissions: msg.member.permissions,
 
-    replied: false,
-
-    reply: async (data) => {
-      fakeInteraction.replied = true;
-      return send(data);
-    },
-
-    followUp: async (data) => send(data),
-
-    deferReply: async () => {},
-
-    editReply: async (data) => send(data),
+    reply: async (data) => msg.channel.send(data),
+    followUp: async (data) => msg.channel.send(data),
 
     options: {
       getString: () => args.join(' '),
@@ -224,9 +109,7 @@ client.on("messageCreate", async msg => {
     await command.execute(fakeInteraction);
   } catch (err) {
     console.error(err);
-    if (!fakeInteraction.replied) {
-      send("❌ Error running command");
-    }
+    msg.channel.send("❌ Error running command");
   }
 });
 

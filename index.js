@@ -123,16 +123,44 @@ client.on('interactionCreate', async interaction => {
     if (!cmd) return;
 
     try {
-      await interaction.deferReply(); // ✅ FIX UNKNOWN INTERACTION
+      let replied = false;
 
-      await cmd.execute(interaction, game);
+      const safeInteraction = {
+        ...interaction,
+
+        reply: async (data) => {
+          if (!replied) {
+            replied = true;
+            return interaction.reply(data);
+          } else {
+            return interaction.followUp(data);
+          }
+        },
+
+        editReply: async (data) => {
+          if (interaction.deferred) {
+            return interaction.editReply(data);
+          } else {
+            return interaction.reply(data);
+          }
+        },
+
+        deferReply: async () => {
+          if (!interaction.deferred && !interaction.replied) {
+            return interaction.deferReply();
+          }
+        }
+      };
+
+      await cmd.execute(safeInteraction, game);
+
     } catch (err) {
       console.error(err);
 
-      if (interaction.deferred) {
-        interaction.editReply("❌ Error");
-      } else {
+      if (!interaction.replied && !interaction.deferred) {
         interaction.reply("❌ Error");
+      } else {
+        interaction.followUp("❌ Error");
       }
     }
   }
@@ -155,7 +183,6 @@ client.on("messageCreate", async msg => {
   const command = client.commands.get(cmdName);
   if (!command) return;
 
-  // ===== SAFE SEND (NO PING) =====
   const send = (data) => {
     if (typeof data === "string") {
       return msg.channel.send({ content: data });
@@ -163,7 +190,6 @@ client.on("messageCreate", async msg => {
     return msg.channel.send(data);
   };
 
-  // ===== FAKE INTERACTION =====
   const fakeInteraction = {
     user: msg.author,
     guildId: msg.guild.id,
@@ -172,7 +198,6 @@ client.on("messageCreate", async msg => {
     memberPermissions: msg.member.permissions,
 
     replied: false,
-    deferred: false,
 
     reply: async (data) => {
       fakeInteraction.replied = true;
@@ -181,9 +206,7 @@ client.on("messageCreate", async msg => {
 
     followUp: async (data) => send(data),
 
-    deferReply: async () => {
-      fakeInteraction.deferred = true;
-    },
+    deferReply: async () => {},
 
     editReply: async (data) => send(data),
 

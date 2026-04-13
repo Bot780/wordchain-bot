@@ -8,9 +8,7 @@ const OWNER_ID = '1382280682319122442';
 const MANAGER_PATH = './managerRoles.json';
 
 function loadManagers() {
-  if (!fs.existsSync(MANAGER_PATH)) {
-    fs.writeFileSync(MANAGER_PATH, JSON.stringify({}, null, 2));
-  }
+  if (!fs.existsSync(MANAGER_PATH)) fs.writeFileSync(MANAGER_PATH, JSON.stringify({}, null, 2));
   return JSON.parse(fs.readFileSync(MANAGER_PATH, 'utf-8'));
 }
 
@@ -26,17 +24,13 @@ function getManagerRoles(guildId) {
 function addManagerRole(guildId, roleId) {
   const data = loadManagers();
   if (!data[guildId]) data[guildId] = [];
-
-  if (!data[guildId].includes(roleId)) {
-    data[guildId].push(roleId);
-    saveManagers(data);
-  }
+  if (!data[guildId].includes(roleId)) data[guildId].push(roleId);
+  saveManagers(data);
 }
 
 function removeManagerRole(guildId, roleId) {
   const data = loadManagers();
   if (!data[guildId]) return;
-
   data[guildId] = data[guildId].filter(r => r !== roleId);
   saveManagers(data);
 }
@@ -45,9 +39,7 @@ function removeManagerRole(guildId, roleId) {
 const PREFIX_PATH = './prefixes.json';
 
 function loadPrefixes() {
-  if (!fs.existsSync(PREFIX_PATH)) {
-    fs.writeFileSync(PREFIX_PATH, JSON.stringify({}, null, 2));
-  }
+  if (!fs.existsSync(PREFIX_PATH)) fs.writeFileSync(PREFIX_PATH, JSON.stringify({}, null, 2));
   return JSON.parse(fs.readFileSync(PREFIX_PATH, 'utf-8'));
 }
 
@@ -69,10 +61,7 @@ function setPrefix(guildId, prefix) {
 // ===== PERMISSION CHECK =====
 function hasPermission(interaction) {
   if (interaction.user.id === OWNER_ID) return true;
-
-  // ✅ cleaner admin check
-  if (interaction.memberPermissions?.has('Administrator')) return true;
-
+  if (interaction.memberPermissions?.has(8n)) return true; // Administrator
   const managerRoles = getManagerRoles(interaction.guildId);
   return interaction.member?.roles?.cache?.some(r => managerRoles.includes(r.id));
 }
@@ -96,20 +85,14 @@ const diceGame = {
   lobbyMessage: null,
   lobbyInterval: null,
   cooldowns: new Map(),
-
-  // ✅ FIX: use object instead of array
-  rolls: {}
+  rolls: []
 };
 
 // ===== COOLDOWN CHECK =====
 function checkRollCooldown(userId) {
   const now = Date.now();
   const cd = diceGame.cooldowns.get(userId);
-
-  if (cd && now < cd) {
-    return Math.ceil((cd - now) / 1000);
-  }
-
+  if (cd && now < cd) return Math.ceil((cd - now) / 1000);
   diceGame.cooldowns.set(userId, now + 5000);
   return 0;
 }
@@ -119,42 +102,16 @@ function buildLobbyEmbed() {
   return new EmbedBuilder()
     .setTitle('🎲 Dice Roll Event — Lobby')
     .setColor('Orange')
-    .setDescription('Click **Join Game** to enter!\nGame starts when timer runs out or lobby fills up.')
+    .setDescription(`Click **Join Game** to enter!\nGame starts when timer runs out or lobby fills up.`)
     .addFields(
-      {
-        name: '👥 Players',
-        value: diceGame.players.length > 0
-          ? diceGame.players.map(p => `• <@${p}>`).join('\n')
-          : '*None yet*',
-        inline: false
-      },
-      {
-        name: '👥 Player Count',
-        value: `\`${diceGame.players.length}/${diceGame.playerLimit}\``,
-        inline: true
-      },
-      {
-        name: '⏳ Time Left',
-        value: `\`${diceGame.timeLeft}s\``,
-        inline: true
-      },
-      {
-        name: '🎯 Target',
-        value: `**${diceGame.target ?? '??'}**`,
-        inline: true
-      },
-      {
-        name: '🎲 Range',
-        value: `\`${diceGame.minRange}–${diceGame.maxRange}\``,
-        inline: true
-      },
-      {
-        name: '🏆 Prize',
-        value: `**${diceGame.prize}**`,
-        inline: true
-      }
+      { name: '👥 Players', value: diceGame.players.length > 0 ? diceGame.players.map(p => `• <@${p}>`).join('\n') : '*None yet*', inline: false },
+      { name: '👥 Player Count', value: `\`${diceGame.players.length}/${diceGame.playerLimit}\``, inline: true },
+      { name: '⏳ Time Left', value: `\`${diceGame.timeLeft}s\``, inline: true },
+      { name: '🎯 Target', value: `**${diceGame.target}**`, inline: true },
+      { name: '🎲 Range', value: `\`${diceGame.minRange}–${diceGame.maxRange}\``, inline: true },
+      { name: '🏆 Prize', value: `**${diceGame.prize}**`, inline: true }
     )
-    .setFooter({ text: 'Min 2 players required to start' });
+    .setFooter({ text: `Min 2 players required to start` });
 }
 
 // ===== JOIN BUTTON ROW =====
@@ -171,10 +128,7 @@ function buildJoinRow(disabled = false) {
 // ===== RESET GAME =====
 function resetDiceGame() {
   clearInterval(diceGame.lobbyInterval);
-
-  // ✅ timer might not exist
-  if (diceGame.timer) clearTimeout(diceGame.timer);
-
+  clearTimeout(diceGame.timer);
   diceGame.active = false;
   diceGame.lobby = false;
   diceGame.players = [];
@@ -192,9 +146,7 @@ function resetDiceGame() {
   diceGame.lobbyMessage = null;
   diceGame.lobbyInterval = null;
   diceGame.cooldowns = new Map();
-
-  // ✅ FIX: reset object properly
-  diceGame.rolls = {};
+  diceGame.rolls = [];
 }
 
 module.exports = {

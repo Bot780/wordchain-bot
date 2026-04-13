@@ -6,7 +6,7 @@ module.exports = {
     .setName('stopdice')
     .setDescription('Stop the current dice event (Admin/Manager only)'),
 
-  async execute(interaction) {
+  async execute(interaction, game) {
     if (!hasPermission(interaction)) {
       return interaction.reply({
         embeds: [
@@ -32,27 +32,24 @@ module.exports = {
     }
 
     const target = diceGame.target;
+    const totalRolls = diceGame.rolls.length;
 
-    // ✅ FIX: convert object → array
-    const rollsArray = Object.entries(diceGame.rolls).map(([userId, rolled]) => ({
-      userId,
-      rolled
-    }));
-
-    const totalRolls = rollsArray.length;
-
-    // ===== FIND CLOSEST =====
+    // Find closest roll — best (closest) roll per user, then find overall closest
     let closestRoll = null;
-
-    if (rollsArray.length > 0) {
-      closestRoll = rollsArray.reduce((best, r) => {
-        return Math.abs(r.rolled - target) < Math.abs(best.rolled - target)
-          ? r
-          : best;
-      });
+    if (diceGame.rolls.length > 0) {
+      const bestPerUser = {};
+      for (const r of diceGame.rolls) {
+        const dist = Math.abs(r.rolled - target);
+        if (!bestPerUser[r.userId] || dist < Math.abs(bestPerUser[r.userId].rolled - target)) {
+          bestPerUser[r.userId] = r;
+        }
+      }
+      closestRoll = Object.values(bestPerUser).reduce((best, r) =>
+        Math.abs(r.rolled - target) < Math.abs(best.rolled - target) ? r : best
+      );
     }
 
-    // ===== DISABLE LOBBY =====
+    // Disable lobby message if still in lobby
     if (diceGame.lobby && diceGame.lobbyMessage) {
       try {
         await diceGame.lobbyMessage.edit({
@@ -74,9 +71,9 @@ module.exports = {
         new EmbedBuilder()
           .setColor('Red')
           .setTitle('🛑 Dice Event Stopped')
-          .setDescription(`Stopped by <@${interaction.user.id}>`)
+          .setDescription(`The dice event was stopped by <@${interaction.user.id}>.`)
           .addFields(
-            { name: '🎯 Target', value: `\`${target}\``, inline: true },
+            { name: '🎯 Target Was', value: `\`${target}\``, inline: true },
             { name: '🎲 Total Rolls', value: `\`${totalRolls}\``, inline: true },
             {
               name: '🏆 Closest Roll',
@@ -90,3 +87,4 @@ module.exports = {
     });
   }
 };
+

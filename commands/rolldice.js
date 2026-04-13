@@ -9,57 +9,46 @@ module.exports = {
 
   async execute(interaction) {
 
-    // ===== NO GAME =====
     if (!diceGame.active) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ No Active Game')
-            .setDescription('Wait for the lobby to start.')
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ No Active Game')],
         flags: 64
       });
     }
 
-    // ===== WRONG CHANNEL =====
     if (interaction.channelId !== diceGame.channelId) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ Wrong Channel')
-            .setDescription(`Game is in <#${diceGame.channelId}>`)
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ Wrong Channel')],
         flags: 64
       });
     }
 
-    // ===== NOT JOINED =====
     if (!diceGame.players.includes(interaction.user.id)) {
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('❌ Not a Participant')
-            .setDescription('You didn’t join this event.')
-        ],
+        embeds: [new EmbedBuilder().setColor('Red').setTitle('❌ Not a Participant')],
         flags: 64
       });
     }
 
-    // ===== COOLDOWN =====
+    // ===== 🔥 FIXED COOLDOWN =====
     const cd = checkRollCooldown(interaction.user.id);
     if (cd > 0) {
-      return interaction.reply({
+
+      const msg = await interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor('Yellow')
             .setTitle('⏳ Cooldown')
             .setDescription(`Wait **${cd}s** before rolling again!`)
-        ],
-        flags: 64
+        ]
       });
+
+      // auto delete after remaining cooldown
+      setTimeout(() => {
+        msg.delete().catch(() => {});
+      }, cd * 1000);
+
+      return;
     }
 
     // ===== ROLL =====
@@ -73,10 +62,7 @@ module.exports = {
       hit
     });
 
-    // ===== WIN =====
     if (hit) {
-
-      // Support string prize like "500 points"
       const prizePoints = parseInt(diceGame.prize) || 0;
 
       if (prizePoints > 0) {
@@ -108,7 +94,6 @@ module.exports = {
       });
     }
 
-    // ===== MISS =====
     return interaction.reply({
       embeds: [
         new EmbedBuilder()
@@ -120,9 +105,6 @@ module.exports = {
             { name: '🎯 Target', value: `**${target}**`, inline: true },
             { name: '🎲 Range', value: `\`${minRange}–${maxRange}\``, inline: true }
           )
-          .setFooter({
-            text: `Rolls: ${diceGame.rolls.length} • 5s cooldown`
-          })
       ]
     });
   }

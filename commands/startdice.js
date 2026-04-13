@@ -28,12 +28,10 @@ module.exports = {
         .setRequired(false)
         .setMinValue(2)
     )
-    .addIntegerOption(opt =>
+    .addStringOption(opt =>
       opt.setName('prize')
-        .setDescription('Points awarded to winner (default: 50)')
+        .setDescription('Prize for the winner e.g. "500 points" or "Nitro"')
         .setRequired(false)
-        .setMinValue(1)
-        .setMaxValue(100000)
     )
     .addIntegerOption(opt =>
       opt.setName('playerlimit')
@@ -75,11 +73,8 @@ module.exports = {
       });
     }
 
-    // ✅ Prevent interval stacking
-    if (diceGame.lobbyInterval) clearInterval(diceGame.lobbyInterval);
-
-    const minRange = interaction.options.getInteger('min') ?? 1;
-    const maxRange = interaction.options.getInteger('max') ?? 100;
+    const minRange = interaction.options.getInteger('min') || 1;
+    const maxRange = interaction.options.getInteger('max') || 100;
 
     if (minRange >= maxRange) {
       return interaction.reply({
@@ -94,36 +89,26 @@ module.exports = {
     }
 
     const rawTarget = interaction.options.getInteger('target');
+    const target = rawTarget
+      ? Math.min(Math.max(rawTarget, minRange), maxRange)
+      : Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
 
-    let target;
-    if (rawTarget !== null) {
-      if (rawTarget < minRange || rawTarget > maxRange) {
-        return interaction.reply({
-          content: `❌ Target must be between ${minRange} and ${maxRange}`,
-          flags: 64
-        });
-      }
-      target = rawTarget;
-    } else {
-      target = Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
-    }
-
-    // ✅ INIT GAME
+    // ===== INIT GAME =====
     diceGame.lobby = true;
     diceGame.active = false;
-    diceGame.mode = null;
-    diceGame.actualMode = null;
     diceGame.target = target;
     diceGame.minRange = minRange;
     diceGame.maxRange = maxRange;
-    diceGame.prize = interaction.options.getInteger('prize') ?? 50;
-    diceGame.playerLimit = interaction.options.getInteger('playerlimit') ?? 20;
-    diceGame.lobbyTime = interaction.options.getInteger('lobbytime') ?? 60;
+    diceGame.prize = interaction.options.getString('prize') || '50 points';
+    diceGame.playerLimit = interaction.options.getInteger('playerlimit') || 20;
+    diceGame.lobbyTime = interaction.options.getInteger('lobbytime') || 60;
     diceGame.timeLeft = diceGame.lobbyTime;
     diceGame.channelId = interaction.channelId;
     diceGame.guildId = interaction.guildId;
     diceGame.players = [];
-    diceGame.rolls = {}; // ✅ FIXED
+
+    // ✅ FIX
+    diceGame.rolls = {};
     diceGame.cooldowns = new Map();
 
     await interaction.reply({
@@ -140,21 +125,23 @@ module.exports = {
 
       if (diceGame.timeLeft === 30) {
         interaction.channel.send({
-          embeds: [new EmbedBuilder().setColor('Yellow').setDescription('⚠️ **30 seconds** left to join the dice event!')]
+          embeds: [new EmbedBuilder().setColor('Yellow').setDescription('⚠️ **30 seconds** left to join!')]
         });
       }
 
       if (diceGame.timeLeft === 10) {
         interaction.channel.send({
-          embeds: [new EmbedBuilder().setColor('Orange').setDescription('⚠️ **10 seconds** left to join the dice event!')]
+          embeds: [new EmbedBuilder().setColor('Orange').setDescription('⚠️ **10 seconds** left to join!')]
         });
       }
 
       try {
-        await diceGame.lobbyMessage.edit({
-          embeds: [buildLobbyEmbed()],
-          components: [buildJoinRow()]
-        });
+        if (diceGame.lobbyMessage) {
+          await diceGame.lobbyMessage.edit({
+            embeds: [buildLobbyEmbed()],
+            components: [buildJoinRow()]
+          });
+        }
       } catch {}
 
       if (diceGame.timeLeft <= 0) {
@@ -162,53 +149,54 @@ module.exports = {
 
         if (diceGame.players.length < 2) {
           try {
-            await diceGame.lobbyMessage.edit({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor('Red')
-                  .setTitle('❌ Dice Event Cancelled')
-                  .setDescription('Not enough players joined. Minimum **2 players** required.')
-              ],
-              components: [buildJoinRow(true)]
-            });
+            if (diceGame.lobbyMessage) {
+              await diceGame.lobbyMessage.edit({
+                embeds: [
+                  new EmbedBuilder()
+                    .setColor('Red')
+                    .setTitle('❌ Dice Event Cancelled')
+                    .setDescription('Not enough players joined. Minimum **2 players** required.')
+                ],
+                components: [buildJoinRow(true)]
+              });
+            }
           } catch {}
 
           resetDiceGame();
           return;
         }
 
+        // ===== START GAME =====
         diceGame.lobby = false;
         diceGame.active = true;
 
         try {
-          await diceGame.lobbyMessage.edit({
-            embeds: [
-              new EmbedBuilder()
-                .setColor('Green')
-                .setTitle('🎲 Lobby Closed — Game is Live!')
-                .setDescription('Lobby is now closed. Good luck to all players!')
-            ],
-            components: [buildJoinRow(true)]
-          });
+          if (diceGame.lobbyMessage) {
+            await diceGame.lobbyMessage.edit({
+              embeds: [
+                new EmbedBuilder()
+                  .setColor('Green')
+                  .setTitle('🎲 Lobby Closed — Game is Live!')
+                  .setDescription('Good luck to all players!')
+              ],
+              components: [buildJoinRow(true)]
+            });
+          }
         } catch {}
-
-        const playerList = diceGame.players.length
-          ? diceGame.players.map(p => `<@${p}>`).join(', ')
-          : 'None';
 
         interaction.channel.send({
           embeds: [
             new EmbedBuilder()
               .setTitle('🎲 Dice Event — Game On!')
               .setColor('Orange')
-              .setDescription('Use `/rolldice` to roll! First to hit the **exact target** wins!')
+              .setDescription('Use `/rolldice` to roll! Hit the exact number to win!')
               .addFields(
-                { name: '🎯 Target', value: `**${target}**`, inline: true },
+                { name: '🎯 Target', value: `\`${target}\``, inline: true },
                 { name: '🎲 Range', value: `\`${minRange}–${maxRange}\``, inline: true },
-                { name: '🏆 Prize', value: `\`${diceGame.prize} points\``, inline: true },
-                { name: '👥 Players', value: playerList, inline: false }
+                { name: '🏆 Prize', value: `${diceGame.prize}`, inline: true },
+                { name: '👥 Players', value: `\`${diceGame.players.length}\` joined`, inline: true }
               )
-              .setFooter({ text: '⏱ 5 second cooldown between rolls!' })
+              .setFooter({ text: '⏱ 5s cooldown between rolls' })
           ]
         });
       }

@@ -32,9 +32,8 @@ module.exports = {
     }
 
     const target = diceGame.target;
-    const players = [...diceGame.players];
 
-    // ✅ FIX: rolls is now object
+    // ✅ FIX: convert object → array
     const rollsArray = Object.entries(diceGame.rolls).map(([userId, rolled]) => ({
       userId,
       rolled
@@ -42,17 +41,18 @@ module.exports = {
 
     const totalRolls = rollsArray.length;
 
-    // ✅ Find closest roll
+    // ===== FIND CLOSEST =====
     let closestRoll = null;
+
     if (rollsArray.length > 0) {
-      closestRoll = rollsArray.reduce((closest, r) => {
-        return Math.abs(r.rolled - target) < Math.abs(closest.rolled - target)
+      closestRoll = rollsArray.reduce((best, r) => {
+        return Math.abs(r.rolled - target) < Math.abs(best.rolled - target)
           ? r
-          : closest;
+          : best;
       });
     }
 
-    // ✅ Disable lobby message if still in lobby
+    // ===== DISABLE LOBBY =====
     if (diceGame.lobby && diceGame.lobbyMessage) {
       try {
         await diceGame.lobbyMessage.edit({
@@ -74,22 +74,15 @@ module.exports = {
         new EmbedBuilder()
           .setColor('Red')
           .setTitle('🛑 Dice Event Stopped')
-          .setDescription(`The dice event was stopped by <@${interaction.user.id}>.`)
+          .setDescription(`Stopped by <@${interaction.user.id}>`)
           .addFields(
-            { name: '🎯 Target Was', value: `\`${target}\``, inline: true },
-            { name: '👥 Total Rolls', value: `\`${totalRolls}\``, inline: true },
+            { name: '🎯 Target', value: `\`${target}\``, inline: true },
+            { name: '🎲 Total Rolls', value: `\`${totalRolls}\``, inline: true },
             {
-              name: '🎲 Closest Roll',
+              name: '🏆 Closest Roll',
               value: closestRoll
                 ? `<@${closestRoll.userId}> rolled \`${closestRoll.rolled}\` (${Math.abs(closestRoll.rolled - target)} away)`
                 : '*No rolls were made*',
-              inline: false
-            },
-            {
-              name: '👥 Players',
-              value: players.length > 0
-                ? players.map(p => `<@${p}>`).join(', ')
-                : '*None*',
               inline: false
             }
           )

@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 // ===== OWNER =====
 const OWNER_ID = '1382280682319122442';
@@ -8,7 +8,9 @@ const OWNER_ID = '1382280682319122442';
 const MANAGER_PATH = './managerRoles.json';
 
 function loadManagers() {
-  if (!fs.existsSync(MANAGER_PATH)) fs.writeFileSync(MANAGER_PATH, JSON.stringify({}, null, 2));
+  if (!fs.existsSync(MANAGER_PATH)) {
+    fs.writeFileSync(MANAGER_PATH, JSON.stringify({}, null, 2));
+  }
   return JSON.parse(fs.readFileSync(MANAGER_PATH, 'utf-8'));
 }
 
@@ -24,13 +26,17 @@ function getManagerRoles(guildId) {
 function addManagerRole(guildId, roleId) {
   const data = loadManagers();
   if (!data[guildId]) data[guildId] = [];
-  if (!data[guildId].includes(roleId)) data[guildId].push(roleId);
-  saveManagers(data);
+
+  if (!data[guildId].includes(roleId)) {
+    data[guildId].push(roleId);
+    saveManagers(data);
+  }
 }
 
 function removeManagerRole(guildId, roleId) {
   const data = loadManagers();
   if (!data[guildId]) return;
+
   data[guildId] = data[guildId].filter(r => r !== roleId);
   saveManagers(data);
 }
@@ -39,7 +45,9 @@ function removeManagerRole(guildId, roleId) {
 const PREFIX_PATH = './prefixes.json';
 
 function loadPrefixes() {
-  if (!fs.existsSync(PREFIX_PATH)) fs.writeFileSync(PREFIX_PATH, JSON.stringify({}, null, 2));
+  if (!fs.existsSync(PREFIX_PATH)) {
+    fs.writeFileSync(PREFIX_PATH, JSON.stringify({}, null, 2));
+  }
   return JSON.parse(fs.readFileSync(PREFIX_PATH, 'utf-8'));
 }
 
@@ -62,7 +70,8 @@ function setPrefix(guildId, prefix) {
 function hasPermission(interaction) {
   if (interaction.user.id === OWNER_ID) return true;
 
-  if (interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator)) return true;
+  // ✅ cleaner admin check
+  if (interaction.memberPermissions?.has('Administrator')) return true;
 
   const managerRoles = getManagerRoles(interaction.guildId);
   return interaction.member?.roles?.cache?.some(r => managerRoles.includes(r.id));
@@ -86,16 +95,21 @@ const diceGame = {
   guildId: null,
   lobbyMessage: null,
   lobbyInterval: null,
-  timer: null, // ✅ FIXED (added)
   cooldowns: new Map(),
-  rolls: {} // ✅ FIXED (array → object)
+
+  // ✅ FIX: use object instead of array
+  rolls: {}
 };
 
 // ===== COOLDOWN CHECK =====
 function checkRollCooldown(userId) {
   const now = Date.now();
   const cd = diceGame.cooldowns.get(userId);
-  if (cd && now < cd) return Math.ceil((cd - now) / 1000);
+
+  if (cd && now < cd) {
+    return Math.ceil((cd - now) / 1000);
+  }
+
   diceGame.cooldowns.set(userId, now + 5000);
   return 0;
 }
@@ -105,7 +119,7 @@ function buildLobbyEmbed() {
   return new EmbedBuilder()
     .setTitle('🎲 Dice Roll Event — Lobby')
     .setColor('Orange')
-    .setDescription(`Click **Join Game** to enter!\nGame starts when timer runs out or lobby fills up.`)
+    .setDescription('Click **Join Game** to enter!\nGame starts when timer runs out or lobby fills up.')
     .addFields(
       {
         name: '👥 Players',
@@ -126,7 +140,7 @@ function buildLobbyEmbed() {
       },
       {
         name: '🎯 Target',
-        value: `???`, // ✅ FIXED (hidden)
+        value: `**${diceGame.target ?? '??'}**`,
         inline: true
       },
       {
@@ -136,11 +150,11 @@ function buildLobbyEmbed() {
       },
       {
         name: '🏆 Prize',
-        value: `\`${diceGame.prize} points\``,
+        value: `**${diceGame.prize}**`,
         inline: true
       }
     )
-    .setFooter({ text: `Min 2 players required to start` });
+    .setFooter({ text: 'Min 2 players required to start' });
 }
 
 // ===== JOIN BUTTON ROW =====
@@ -157,7 +171,9 @@ function buildJoinRow(disabled = false) {
 // ===== RESET GAME =====
 function resetDiceGame() {
   clearInterval(diceGame.lobbyInterval);
-  clearTimeout(diceGame.timer);
+
+  // ✅ timer might not exist
+  if (diceGame.timer) clearTimeout(diceGame.timer);
 
   diceGame.active = false;
   diceGame.lobby = false;
@@ -175,9 +191,10 @@ function resetDiceGame() {
   diceGame.guildId = null;
   diceGame.lobbyMessage = null;
   diceGame.lobbyInterval = null;
-  diceGame.timer = null;
   diceGame.cooldowns = new Map();
-  diceGame.rolls = {}; // ✅ FIXED
+
+  // ✅ FIX: reset object properly
+  diceGame.rolls = {};
 }
 
 module.exports = {

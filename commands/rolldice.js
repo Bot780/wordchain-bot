@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { diceGame, checkRollCooldown, resetDiceGame } = require('../diceManager');
-const { getPlayer, updatePlayer } = require('../stats');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -14,7 +13,7 @@ module.exports = {
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ No Active Game')
-            .setDescription('There is no dice game running right now! Wait for the lobby to start.')
+            .setDescription('There is no dice game running right now!')
         ],
         flags: 64
       });
@@ -38,7 +37,7 @@ module.exports = {
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ Not a Participant')
-            .setDescription('You did not join this dice event! You can join the next one.')
+            .setDescription('You did not join this dice event!')
         ],
         flags: 64
       });
@@ -51,7 +50,7 @@ module.exports = {
           new EmbedBuilder()
             .setColor('Yellow')
             .setTitle('⏳ Cooldown')
-            .setDescription(`You must wait **${cd} second${cd > 1 ? 's' : ''}** before rolling again!`)
+            .setDescription(`Wait **${cd}s** before rolling again!`)
         ],
         flags: 64
       });
@@ -62,19 +61,12 @@ module.exports = {
     const rolled = Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
     const hit = rolled === target;
 
-    // ✅ FIX: rolls is object (userId → roll)
     diceGame.rolls[interaction.user.id] = rolled;
 
     const totalRolls = Object.keys(diceGame.rolls).length;
 
     // ===== WIN =====
     if (hit) {
-      const player = getPlayer(interaction.user.id, interaction.guildId);
-
-      updatePlayer(interaction.user.id, interaction.guildId, {
-        points: (player.points || 0) + diceGame.prize
-      });
-
       const prize = diceGame.prize;
 
       resetDiceGame();
@@ -84,35 +76,30 @@ module.exports = {
           new EmbedBuilder()
             .setTitle('🎉 We Have a Winner!')
             .setColor('Gold')
-            .setDescription(`<@${interaction.user.id}> hit the exact target and won the dice event!`)
+            .setDescription(`<@${interaction.user.id}> hit the exact target and won!`)
             .addFields(
-              { name: '🎲 Winning Roll', value: `\`${rolled}\``, inline: true },
-              { name: '🎯 Target Was', value: `\`${target}\``, inline: true },
-              { name: '🏆 Points Won', value: `\`${prize} points\``, inline: true },
+              { name: '🎲 Roll', value: `\`${rolled}\``, inline: true },
+              { name: '🎯 Target', value: `\`${target}\``, inline: true },
+              { name: '🏆 Prize', value: `${prize}`, inline: true },
               { name: '👥 Total Rolls', value: `\`${totalRolls}\``, inline: true }
             )
-            .setFooter({ text: 'Congratulations! 🎊' })
         ]
       });
     }
 
     // ===== MISS =====
-    const diff = rolled - target;
-    const hint = diff > 0 ? '📉 Too high!' : '📈 Too low!';
-
     return interaction.reply({
       embeds: [
         new EmbedBuilder()
           .setColor('Red')
           .setTitle('🎲 Miss!')
           .addFields(
-            { name: '🎲 You Rolled', value: `\`${rolled}\``, inline: true },
-            { name: '🎲 Range', value: `\`${minRange}–${maxRange}\``, inline: true },
-            { name: '💬 Hint', value: hint, inline: false }
+            { name: '👤 Player', value: `<@${interaction.user.id}>`, inline: true },
+            { name: '🎲 Rolled', value: `\`${rolled}\``, inline: true },
+            { name: '💡 Hint', value: rolled > target ? '📉 Too high!' : '📈 Too low!', inline: false }
           )
-          .setFooter({ text: `Total rolls so far: ${totalRolls} • 5s cooldown applies` })
-      ],
-      flags: 64
+          .setFooter({ text: `Total rolls: ${totalRolls}` })
+      ]
     });
   }
 };

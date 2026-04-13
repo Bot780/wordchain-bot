@@ -17,12 +17,10 @@ app.listen(PORT, () => console.log("🌐 Web server running"));
 // ===== ERROR HANDLING =====
 process.on("uncaughtException", (err) => {
   console.error("Crash:", err);
-  process.exit(1);
 });
 
 process.on("unhandledRejection", (err) => {
   console.error("Promise Error:", err);
-  process.exit(1);
 });
 
 // ===== CLIENT =====
@@ -37,7 +35,7 @@ const client = new Client({
 // ===== COMMAND HANDLER =====
 client.commands = new Map();
 const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
-let commandsData = [];
+const commandsData = [];
 
 for (const file of commandFiles) {
   const cmd = require(`./commands/${file}`);
@@ -125,20 +123,22 @@ client.on('interactionCreate', async interaction => {
     if (!cmd) return;
 
     try {
+      await interaction.deferReply(); // ✅ FIX UNKNOWN INTERACTION
+
       await cmd.execute(interaction, game);
     } catch (err) {
       console.error(err);
 
-      if (interaction.replied || interaction.deferred) {
-        interaction.followUp({ content: "❌ Error", flags: 64 });
+      if (interaction.deferred) {
+        interaction.editReply("❌ Error");
       } else {
-        interaction.reply({ content: "❌ Error", flags: 64 });
+        interaction.reply("❌ Error");
       }
     }
   }
 });
 
-// ===== HYBRID PREFIX SYSTEM ====
+// ===== HYBRID PREFIX SYSTEM =====
 client.on("messageCreate", async msg => {
   if (msg.author.bot || !msg.guild) return;
 
@@ -172,15 +172,20 @@ client.on("messageCreate", async msg => {
     memberPermissions: msg.member.permissions,
 
     replied: false,
+    deferred: false,
 
     reply: async (data) => {
       fakeInteraction.replied = true;
       return send(data);
     },
 
-    followUp: async (data) => {
-      return send(data);
+    followUp: async (data) => send(data),
+
+    deferReply: async () => {
+      fakeInteraction.deferred = true;
     },
+
+    editReply: async (data) => send(data),
 
     options: {
       getString: () => args.join(' '),
@@ -196,8 +201,6 @@ client.on("messageCreate", async msg => {
     await command.execute(fakeInteraction);
   } catch (err) {
     console.error(err);
-
-    // ✅ prevent double error spam
     if (!fakeInteraction.replied) {
       send("❌ Error running command");
     }

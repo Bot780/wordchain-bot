@@ -1,55 +1,56 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const { removeManagerRole, getManagerRoles } = require('../diceManager');
+const { addManagerRole, getManagerRoles } = require('../diceManager');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('removemanager')
-    .setDescription('Remove a manager role from dice event control (Admin only)')
+    .setName('setmanager')
+    .setDescription('Add a manager role that can control dice events (Admin only)')
     .addRoleOption(opt =>
       opt.setName('role')
-        .setDescription('The role to remove manager permissions from')
+        .setDescription('The role to grant manager permissions')
         .setRequired(true)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
-    // ✅ Strict admin check
+    // ✅ Strict admin check (not hasPermission)
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor('Red')
             .setTitle('❌ No Permission')
-            .setDescription('Only **Admins** can remove manager roles.')
+            .setDescription('Only **Admins** can add manager roles.')
         ],
         flags: 64
       });
     }
 
     const role = interaction.options.getRole('role');
+
     const current = getManagerRoles(interaction.guildId);
 
-    // ✅ Prevent removing non-existing role
-    if (!current.includes(role.id)) {
+    // ✅ Prevent duplicate
+    if (current.includes(role.id)) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor('Yellow')
-            .setTitle('⚠️ Not a Manager')
-            .setDescription(`<@&${role.id}> is not a manager role.`)
+            .setTitle('⚠️ Already Manager')
+            .setDescription(`<@&${role.id}> is already a manager role.`)
         ],
         flags: 64
       });
     }
 
-    removeManagerRole(interaction.guildId, role.id);
+    addManagerRole(interaction.guildId, role.id);
 
     return interaction.reply({
       embeds: [
         new EmbedBuilder()
-          .setColor('Orange')
-          .setTitle('✅ Manager Role Removed')
-          .setDescription(`<@&${role.id}> can no longer manage dice events.`)
+          .setColor('Green')
+          .setTitle('✅ Manager Role Added')
+          .setDescription(`<@&${role.id}> can now manage dice events!`)
       ]
     });
   }

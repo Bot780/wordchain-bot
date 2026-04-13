@@ -64,7 +64,7 @@ const game = require('./game');
 // ===== INTERACTIONS =====
 client.on('interactionCreate', async interaction => {
 
-  // ===== CONFIG PANEL HANDLER (🔥 IMPORTANT)
+  // ===== CONFIG PANEL =====
   const configCmd = client.commands.get('config');
   if (
     (interaction.isButton() ||
@@ -76,32 +76,41 @@ client.on('interactionCreate', async interaction => {
     if (handled !== false) return;
   }
 
-// ===== PROFILE BUTTON HANDLER =====
-if (interaction.isButton()) {
-  const profile = client.commands.get('profile');
-  if (profile?.handleInteraction) {
-    const handled = await profile.handleInteraction(interaction);
-    if (handled !== false) return;
+  // ===== PROFILE BUTTON =====
+  if (interaction.isButton()) {
+    const profile = client.commands.get('profile');
+    if (profile?.handleInteraction) {
+      const handled = await profile.handleInteraction(interaction);
+      if (handled !== false) return;
+    }
   }
-}
 
-// ===== LEADERBOARD HANDLER =====
-if (interaction.isButton() || interaction.isStringSelectMenu()) {
-  const leaderboard = client.commands.get('leaderboard');
-  if (leaderboard?.handleInteraction) {
-    const handled = await leaderboard.handleInteraction(interaction);
-    if (handled !== false) return;
+  // ===== LEADERBOARD =====
+  if (interaction.isButton() || interaction.isStringSelectMenu()) {
+    const leaderboard = client.commands.get('leaderboard');
+    if (leaderboard?.handleInteraction) {
+      const handled = await leaderboard.handleInteraction(interaction);
+      if (handled !== false) return;
+    }
   }
-}
 
-// ===== HOWTOPLAY HANDLER =====
-if (interaction.isButton()) {
-  const howto = client.commands.get('howtoplay');
-  if (howto?.handleInteraction) {
-    const handled = await howto.handleInteraction(interaction);
-    if (handled !== false) return;
+  // ===== HOWTOPLAY =====
+  if (interaction.isButton()) {
+    const howto = client.commands.get('howtoplay');
+    if (howto?.handleInteraction) {
+      const handled = await howto.handleInteraction(interaction);
+      if (handled !== false) return;
+    }
   }
-}
+
+  // ===== JOIN DICE BUTTON ===== 🔥 (ADDED)
+  if (interaction.isButton()) {
+    const joinDice = client.commands.get('joindice');
+    if (joinDice?.handleInteraction) {
+      const handled = await joinDice.handleInteraction(interaction);
+      if (handled !== false) return;
+    }
+  }
 
   // ===== GAME BUTTON =====
   if (interaction.isButton()) {
@@ -127,11 +136,30 @@ if (interaction.isButton()) {
   }
 });
 
-// ===== GAME MESSAGES =====
+// ===== MESSAGE (PREFIX + GAME) =====
 client.on("messageCreate", msg => {
-  if (msg.author.bot) return;
+  if (msg.author.bot || !msg.guild) return;
+
+  const { getPrefix } = require('./diceManager');
+  const prefix = getPrefix(msg.guild.id);
+
+  // ===== PREFIX COMMANDS =====
+  if (msg.content.startsWith(prefix)) {
+    const args = msg.content.slice(prefix.length).trim().split(/ +/);
+    const cmdName = args.shift().toLowerCase();
+
+    if (cmdName === 'help') {
+      return msg.reply('📖 Help command here');
+    }
+
+    if (cmdName === 'roll') {
+      return msg.reply('🎲 Roll command here');
+    }
+  }
+
+  // ===== WORD GAME =====
   game.handleMessage(msg);
 });
 
-// ===== LOGIN (FIXED 💀)
+// ===== LOGIN =====
 client.login(TOKEN);

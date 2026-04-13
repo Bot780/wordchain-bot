@@ -1,34 +1,26 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getConfig } = require('../configLoader');
+const { getManagerRoles } = require('../diceManager');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('managerlist')
-    .setDescription('View all manager roles'),
+    .setDescription('View all manager roles for dice events'),
 
   async execute(interaction) {
-    const config = getConfig(interaction.guild.id);
+    const roles = getManagerRoles(interaction.guildId);
 
-    const roles = config.managerRoles || [];
-
-    // ❌ No managers
-    if (roles.length === 0) {
-      return interaction.reply({
-        content: "❌ No manager roles set",
-        flags: 64
-      });
-    }
-
-    // ✅ Format roles
-    const roleList = roles.map(r => `<@&${r}>`).join('\n');
-
-    const embed = new EmbedBuilder()
-      .setColor("Blue")
-      .setTitle("🎮 Manager Roles")
-      .setDescription(roleList);
+    const roleList = roles.length > 0
+      ? roles.map(r => `• <@&${r}>`).join('\n')
+      : '*No manager roles set yet.*\nAdmins can use `/setmanager` to add one.';
 
     return interaction.reply({
-      embeds: [embed]
+      embeds: [
+        new EmbedBuilder()
+          .setColor('Blurple')
+          .setTitle('👑 Dice Event Manager Roles')
+          .setDescription(roleList)
+          .setFooter({ text: `${roles.length} manager role${roles.length === 1 ? '' : 's'} configured` })
+      ]
     });
   }
 };

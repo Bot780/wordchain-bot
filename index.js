@@ -50,34 +50,36 @@ client.on('interactionCreate', async interaction => {
   // 🔤 WORDCHAIN BUTTON ONLY
   if (interaction.isButton()) {
 
-    if (interaction.customId === 'join') {
-      const joinCmd = client.commands.get('join');
-      if (!joinCmd) return;
+  const id = interaction.customId;
 
-      try {
-        await joinCmd.execute(interaction, game);
-      } catch (err) {
-        console.error(err);
-      }
+  // 🔤 WordChain join
+  if (id === 'join') {
+    const joinCmd = client.commands.get('join');
+    if (!joinCmd) return;
 
-      return;
+    try {
+      await joinCmd.execute(interaction, game);
+    } catch (err) {
+      console.error(err);
     }
+
+    return;
   }
 
-// 📖 HOW TO PLAY BUTTONS
-if (interaction.customId.startsWith('htp_')) {
-  const howCmd = client.commands.get('howtoplay');
-  if (!howCmd) return;
+  // 📖 HOW TO PLAY
+  if (id && id.startsWith('htp_')) {
+    const howCmd = client.commands.get('howtoplay');
+    if (!howCmd) return;
 
-  try {
-    await howCmd.handleInteraction(interaction);
-  } catch (err) {
-    console.error(err);
+    try {
+      await howCmd.handleInteraction(interaction);
+    } catch (err) {
+      console.error(err);
+    }
+
+    return;
   }
-
-  return;
 }
-
   // ===== SLASH =====
   if (!interaction.isChatInputCommand()) return;
 

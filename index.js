@@ -42,23 +42,53 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 const game = require('./game');
 
 // ===== INTERACTIONS =====
+// ===== INTERACTIONS =====
 client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
-  const cmd = client.commands.get(interaction.commandName);
+  // ===== BUTTONS =====
+  if (interaction.isButton()) {
 
-  // BUTTON (joindice)
-  // ===== BUTTON HANDLER =====
-if (interaction.isButton()) {
+    // 🎲 Dice join
+    if (interaction.customId === 'join_dice') {
+      const joinDice = client.commands.get('joindice');
+      if (joinDice?.handleInteraction) {
+        return joinDice.handleInteraction(interaction);
+      }
+    }
 
-  // 🎲 Dice join
-  if (interaction.customId === 'join_dice') {
-    const joinDice = client.commands.get('joindice');
-    if (joinDice?.handleInteraction) {
-      return joinDice.handleInteraction(interaction);
+    // 🔤 WordChain join
+    if (interaction.customId === 'join') {
+      const joinCmd = client.commands.get('join');
+      if (!joinCmd) return;
+
+      try {
+        await joinCmd.execute(interaction, game);
+      } catch (err) {
+        console.error(err);
+      }
+
+      return;
     }
   }
 
+  // ===== SLASH COMMANDS =====
+  if (!interaction.isChatInputCommand()) return;
+
+  const cmd = client.commands.get(interaction.commandName);
+  if (!cmd) return;
+
+  try {
+    await cmd.execute(interaction, game);
+  } catch (err) {
+    console.error(err);
+
+    if (interaction.replied) {
+      interaction.followUp("❌ Error");
+    } else {
+      interaction.reply("❌ Error");
+    }
+  }
+});
   // 🔤 WordChain join (🔥 THIS IS YOUR FIX)
   if (interaction.customId === 'join') {
     const joinCmd = client.commands.get('join');

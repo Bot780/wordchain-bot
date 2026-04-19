@@ -47,18 +47,9 @@ const game = require('./game');
 // ===== INTERACTIONS =====
 client.on('interactionCreate', async interaction => {
 
-  // ===== BUTTON HANDLER =====
+  // 🔤 WORDCHAIN BUTTON ONLY
   if (interaction.isButton()) {
 
-    // 🎲 Dice join
-    if (interaction.customId === 'join_dice') {
-      const joinDice = client.commands.get('joindice');
-      if (joinDice?.handleInteraction) {
-        return joinDice.handleInteraction(interaction);
-      }
-    }
-
-    // 🔤 WordChain join
     if (interaction.customId === 'join') {
       const joinCmd = client.commands.get('join');
       if (!joinCmd) return;
@@ -73,7 +64,7 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // ===== SLASH COMMANDS =====
+  // ===== SLASH =====
   if (!interaction.isChatInputCommand()) return;
 
   const cmd = client.commands.get(interaction.commandName);
@@ -92,19 +83,18 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// ===== PREFIX SYSTEM =====
+// ===== PREFIX =====
 client.on("messageCreate", async msg => {
   if (msg.author.bot || !msg.guild) return;
 
-  const { getPrefix } = require('./diceManager');
-  const prefix = getPrefix(msg.guild.id);
+  const PREFIX = ".";
 
   // 🔤 WordChain message handler
-  if (!msg.content.startsWith(prefix)) {
+  if (!msg.content.startsWith(PREFIX)) {
     return game.handleMessage(msg);
   }
 
-  const args = msg.content.slice(prefix.length).trim().split(/ +/);
+  const args = msg.content.slice(PREFIX.length).trim().split(/ +/);
   const cmdName = args.shift()?.toLowerCase();
   const command = client.commands.get(cmdName);
   if (!command) return;

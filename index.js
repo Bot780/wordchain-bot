@@ -34,7 +34,10 @@ for (const file of commandFiles) {
 // ===== REGISTER =====
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 (async () => {
-  await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commandsData });
+  await rest.put(
+    Routes.applicationCommands(CLIENT_ID),
+    { body: commandsData }
+  );
   console.log("✅ Commands registered");
 })();
 
@@ -42,10 +45,9 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 const game = require('./game');
 
 // ===== INTERACTIONS =====
-// ===== INTERACTIONS =====
 client.on('interactionCreate', async interaction => {
 
-  // ===== BUTTONS =====
+  // ===== BUTTON HANDLER =====
   if (interaction.isButton()) {
 
     // 🎲 Dice join
@@ -83,26 +85,13 @@ client.on('interactionCreate', async interaction => {
     console.error(err);
 
     if (interaction.replied) {
-      interaction.followUp("❌ Error");
+      interaction.followUp({ content: "❌ Error" });
     } else {
-      interaction.reply("❌ Error");
+      interaction.reply({ content: "❌ Error" });
     }
   }
 });
-  // 🔤 WordChain join (🔥 THIS IS YOUR FIX)
-  if (interaction.customId === 'join') {
-    const joinCmd = client.commands.get('join');
-    if (!joinCmd) return;
 
-    try {
-      await joinCmd.execute(interaction, game); // ✅ PASS GAME
-    } catch (err) {
-      console.error(err);
-    }
-
-    return;
-  }
-}
 // ===== PREFIX SYSTEM =====
 client.on("messageCreate", async msg => {
   if (msg.author.bot || !msg.guild) return;
@@ -110,12 +99,13 @@ client.on("messageCreate", async msg => {
   const { getPrefix } = require('./diceManager');
   const prefix = getPrefix(msg.guild.id);
 
+  // 🔤 WordChain message handler
   if (!msg.content.startsWith(prefix)) {
     return game.handleMessage(msg);
   }
 
   const args = msg.content.slice(prefix.length).trim().split(/ +/);
-  const cmdName = args.shift().toLowerCase();
+  const cmdName = args.shift()?.toLowerCase();
   const command = client.commands.get(cmdName);
   if (!command) return;
 
@@ -142,7 +132,7 @@ client.on("messageCreate", async msg => {
   };
 
   try {
-    await command.execute(fakeInteraction);
+    await command.execute(fakeInteraction, game);
   } catch (err) {
     console.error(err);
     msg.channel.send("❌ Error running command");

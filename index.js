@@ -64,6 +64,20 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
+// 📖 HOW TO PLAY BUTTONS
+if (interaction.customId.startsWith('htp_')) {
+  const howCmd = client.commands.get('howtoplay');
+  if (!howCmd) return;
+
+  try {
+    await howCmd.handleInteraction(interaction);
+  } catch (err) {
+    console.error(err);
+  }
+
+  return;
+}
+
   // ===== SLASH =====
   if (!interaction.isChatInputCommand()) return;
 

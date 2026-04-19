@@ -48,25 +48,31 @@ client.on('interactionCreate', async interaction => {
   const cmd = client.commands.get(interaction.commandName);
 
   // BUTTON (joindice)
-  if (interaction.isButton()) {
+  // ===== BUTTON HANDLER =====
+if (interaction.isButton()) {
+
+  // 🎲 Dice join
+  if (interaction.customId === 'join_dice') {
     const joinDice = client.commands.get('joindice');
-    if (joinDice?.handleInteraction) return joinDice.handleInteraction(interaction);
-  }
-
-  if (!cmd) return;
-
-  try {
-    await cmd.execute(interaction, game);
-  } catch (err) {
-    console.error(err);
-    if (interaction.replied) {
-      interaction.followUp("❌ Error");
-    } else {
-      interaction.reply("❌ Error");
+    if (joinDice?.handleInteraction) {
+      return joinDice.handleInteraction(interaction);
     }
   }
-});
 
+  // 🔤 WordChain join (🔥 THIS IS YOUR FIX)
+  if (interaction.customId === 'join') {
+    const joinCmd = client.commands.get('join');
+    if (!joinCmd) return;
+
+    try {
+      await joinCmd.execute(interaction, game); // ✅ PASS GAME
+    } catch (err) {
+      console.error(err);
+    }
+
+    return;
+  }
+}
 // ===== PREFIX SYSTEM =====
 client.on("messageCreate", async msg => {
   if (msg.author.bot || !msg.guild) return;

@@ -216,9 +216,11 @@ async function startGame(channel) {
   const letters = "abcdefghijklmnopqrstuvwxyz";
   game.lastLetter = letters[Math.floor(Math.random() * letters.length)];
 
-  game.players.forEach(p => {
-    game.stats[p] = { points: 0, longestWord: "" };
-  });
+  game.stats = {}; // 🔥 IMPORTANT RESET
+
+game.players.forEach(p => {
+  game.stats[p] = { points: 0, longestWord: "" };
+});
 
   if (game.lobbyMessage) {
     await game.lobbyMessage.edit({
@@ -347,12 +349,13 @@ function endGame(channel) {
 
   let longest = { word: "", user: null };
 
-  for (let p in game.stats) {
-    if (game.stats[p].longestWord.length > longest.word.length) {
-      longest.word = game.stats[p].longestWord;
-      longest.user = p;
-    }
+for (let p in game.stats) {
+  const lw = game.stats[p]?.longestWord || "";
+  if (lw.length > longest.word.length) {
+    longest.word = lw;
+    longest.user = p;
   }
+}
 
   const winnerText = config.winnerMessage.replace("{player}", `<@${winner}>`);
 
@@ -370,6 +373,9 @@ function endGame(channel) {
   });
 
   game.active = false;
+game.stats = {};
+game.usedWords = [];
+game.lastLetter = "";
 }
 
 // ===== MESSAGE =====

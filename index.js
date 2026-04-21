@@ -41,8 +41,16 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   console.log("✅ Commands registered");
 })();
 
-// ===== GAME =====
-const game = require('./game');
+// ===== GAME (FIXED: PER GUILD) =====
+const baseGame = require('./game');
+const games = new Map();
+
+function getGame(guildId) {
+  if (!games.has(guildId)) {
+    games.set(guildId, structuredClone(baseGame));
+  }
+  return games.get(guildId);
+}
 
 // ===== INTERACTIONS =====
 client.on('interactionCreate', async interaction => {
@@ -50,36 +58,38 @@ client.on('interactionCreate', async interaction => {
   // 🔤 WORDCHAIN BUTTON ONLY
   if (interaction.isButton()) {
 
-  const id = interaction.customId;
+    const id = interaction.customId;
 
-  // 🔤 WordChain join
-  if (id === 'join') {
-    const joinCmd = client.commands.get('join');
-    if (!joinCmd) return;
+    // 🔤 WordChain join
+    if (id === 'join') {
+      const joinCmd = client.commands.get('join');
+      if (!joinCmd) return;
 
-    try {
-      await joinCmd.execute(interaction, game);
-    } catch (err) {
-      console.error(err);
+      try {
+        const game = getGame(interaction.guildId);
+        await joinCmd.execute(interaction, game);
+      } catch (err) {
+        console.error(err);
+      }
+
+      return;
     }
 
-    return;
-  }
+    // 📖 HOW TO PLAY
+    if (id && id.startsWith('htp_')) {
+      const howCmd = client.commands.get('howtoplay');
+      if (!howCmd) return;
 
-  // 📖 HOW TO PLAY
-  if (id && id.startsWith('htp_')) {
-    const howCmd = client.commands.get('howtoplay');
-    if (!howCmd) return;
+      try {
+        await howCmd.handleInteraction(interaction);
+      } catch (err) {
+        console.error(err);
+      }
 
-    try {
-      await howCmd.handleInteraction(interaction);
-    } catch (err) {
-      console.error(err);
+      return;
     }
-
-    return;
   }
-}
+
   // ===== SLASH =====
   if (!interaction.isChatInputCommand()) return;
 
@@ -87,6 +97,7 @@ client.on('interactionCreate', async interaction => {
   if (!cmd) return;
 
   try {
+    const game = getGame(interaction.guildId);
     await cmd.execute(interaction, game);
   } catch (err) {
     console.error(err);
@@ -107,6 +118,7 @@ client.on("messageCreate", async msg => {
 
   // 🔤 WordChain message handler
   if (!msg.content.startsWith(PREFIX)) {
+    const game = getGame(msg.guild.id);
     return game.handleMessage(msg);
   }
 
@@ -138,6 +150,7 @@ client.on("messageCreate", async msg => {
   };
 
   try {
+    const game = getGame(msg.guild.id);
     await command.execute(fakeInteraction, game);
   } catch (err) {
     console.error(err);

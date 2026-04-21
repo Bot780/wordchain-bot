@@ -203,10 +203,13 @@ async function startLobby(channel, interaction) {
 
 // ===== START GAME =====
 async function startGame(channel) {
+
+clearTimeout(game.timer);
+clearInterval(game.lobbyInterval);
+
   if (game.active) return;
 
   game.active = true;
-  clearInterval(game.lobbyInterval);
 
   game.usedWords = [];
   game.currentPlayerIndex = 0;
@@ -289,15 +292,24 @@ async function nextTurn(channel) {
     ]
   });
 
-  game.timer = setTimeout(() => {
-    if (!game.active) return;
-    eliminate(channel, player);
-  }, game.turnTime);
+  const turnPlayer = player; // 🔥 lock player
+
+game.timer = setTimeout(() => {
+  if (!game.active) return;
+
+  // 🔥 ensure still same player's turn
+  if (game.players[game.currentPlayerIndex] !== turnPlayer) return;
+
+  eliminate(channel, turnPlayer);
+}, game.turnTime);
 }
 
 // ===== ELIMINATE =====
 function eliminate(channel, player) {
   if (!game.active) return;
+
+  // 🔥 ADD THIS
+  if (!game.players.includes(player)) return;
 
   clearTimeout(game.timer);
 
@@ -375,9 +387,20 @@ for (let p in game.stats) {
   });
 
   game.active = false;
+
+// 🔥 STOP ALL TIMERS
+clearTimeout(game.timer);
+clearInterval(game.lobbyInterval);
+game.timer = null;
+game.lobbyInterval = null;
+
+// 🔥 FULL RESET
+game.players = [];
+game.currentPlayerIndex = 0;
 game.stats = {};
 game.usedWords = [];
 game.lastLetter = "";
+game.starting = false;
 }
 
 // ===== MESSAGE =====
@@ -408,6 +431,7 @@ async function handleMessage(msg) {
     return msg.reply("❌ Not a valid word");
 
   clearTimeout(game.timer);
+game.timer = null; // 🔥 important
 
   const formatted = word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
 

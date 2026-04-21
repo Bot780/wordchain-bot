@@ -1,3 +1,5 @@
+module.exports = function createGame() {
+
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const fs = require('fs');
 const { getConfig } = require('./configLoader');
@@ -492,5 +494,5 @@ game.handleButton = handleButton;
 game.leaveGame = leaveGame;
 game.reloadWords = loadWords;
 
-module.exports = game;
-
+return game;
+};

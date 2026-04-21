@@ -42,12 +42,13 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 })();
 
 // ===== GAME (FIXED: PER GUILD) =====
-const baseGame = require('./game');
+const createGame = require('./game');
 const games = new Map();
 
 function getGame(guildId) {
   if (!games.has(guildId)) {
-    games.set(guildId, structuredClone(baseGame));
+    // create fresh instance instead of cloning
+    games.set(guildId, createGame());
   }
   return games.get(guildId);
 }
